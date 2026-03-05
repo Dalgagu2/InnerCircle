@@ -1,50 +1,90 @@
-# Welcome to your Expo app 👋
+# Inner Circle - Full App Setup Guide
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## What You're Getting
 
-## Get started
+This is the complete Inner Circle friendship tracker app with:
+- **Dashboard** with contact cards, urgency tracking, and progress bars
+- **5-tier friendship system** with color-coded categories
+- **Interaction logging** (coffee, call, text, hangout, etc.)
+- **Time tracking** showing how long since you last contacted someone
+- **Urgency alerts** (green → yellow → orange → red)
+- **Search** across all contacts
+- **Dashboard & Tier views** for different perspectives
+- **Contact notes** for remembering details about people
+- **Persistent storage** so your data survives app restarts
+- **Onboarding flow** for first-time users
+- **Settings screen** with notification preferences and data export
+- **Pull-to-refresh** on the main screen
 
-1. Install dependencies
+## File Structure
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+InnerCircle/
+├── app/
+│   ├── _layout.tsx              ← Root layout (dark status bar)
+│   └── (tabs)/
+│       ├── _layout.tsx          ← Tab bar config (Home + Settings)
+│       ├── index.tsx            ← Main dashboard screen
+│       └── settings.tsx         ← Settings screen
+├── components/
+│   ├── AddContactModal.tsx      ← Add new contact form
+│   ├── ContactCard.tsx          ← Individual contact card
+│   ├── ContactDetailModal.tsx   ← Contact detail / log interaction
+│   └── OnboardingScreen.tsx     ← First-time user walkthrough
+├── constants/
+│   ├── theme.ts                 ← Colors, tier config, interaction types
+│   └── types.ts                 ← TypeScript interfaces
+└── utils/
+    ├── storage.ts               ← AsyncStorage save/load functions
+    └── time.ts                  ← Time calculations and urgency logic
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Setup Instructions
 
-## Learn more
+### Step 1: Install the dependency
+```bash
+cd ~/InnerCircle
+npx expo install @react-native-async-storage/async-storage
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### Step 2: Copy the files
+Copy each file from this package into your InnerCircle project,
+matching the folder structure above. You'll need to:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+1. Create the folders if they don't exist:
+```bash
+mkdir -p constants utils components
+```
 
-## Join the community
+2. Copy each file to its correct location (see structure above)
 
-Join our community of developers creating universal apps.
+3. Replace any existing files in app/(tabs)/ with the new versions
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Step 3: Run it
+```bash
+npx expo start
+```
+
+Scan the QR code with your phone and you should see the onboarding screen!
+
+## How to Use
+
+- **Add contacts**: Tap "+ Add" button
+- **View contact details**: Tap any contact card
+- **Log interaction**: Tap a contact → choose type → tap "Log"
+- **Change tier**: Tap a contact → tap tier buttons
+- **Delete contact**: Long-press a contact card (or use Delete in detail view)
+- **Search**: Type in the search bar
+- **Switch views**: Toggle between Dashboard and By Tier
+- **Filter by tier**: Tap the T1-T5 filter chips
+- **Pull to refresh**: Pull down on the contact list
+
+## Tier System
+
+| Tier | Label | Check-in Frequency | Color |
+|------|-------|-------------------|-------|
+| 1 | Inner Circle | Every 3 days | Red |
+| 2 | Close Friends | Every 7 days | Orange |
+| 3 | Good Friends | Every 14 days | Yellow |
+| 4 | Casual Friends | Every 30 days | Blue |
+| 5 | Acquaintances | Every 90 days | Purple |

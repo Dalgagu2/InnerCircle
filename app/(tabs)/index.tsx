@@ -1,134 +1,420 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import AddContactModal from '../../components/AddContactModal';
+import CalendarSyncModal from '../../components/CalendarSyncModal';
+import ContactCard from '../../components/ContactCard';
+import ContactDetailModal from '../../components/ContactDetailModal';
+import ImportContactsModal from '../../components/ImportContactsModal';
+import OnboardingScreen from '../../components/OnboardingScreen';
+import { COLORS, TIER_CONFIG } from '../../constants/theme';
+import { Contact } from '../../constants/types';
+import { checkAndSendNotifications, requestNotificationPermission, scheduleAllNotifications } from '../../utils/notifications';
+import { hasOnboarded, loadContacts, saveContacts, setOnboarded } from '../../utils/storage';
+import { daysSince, sortByUrgency } from '../../utils/time';
+
+const SAMPLE_CONTACTS: Contact[] = [
+  { id: '1', name: 'Alex Rivera', tier: 1, lastInteraction: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0], interactionType: '☕ Coffee/Meal', history: [], notes: '', birthday: '03/15', hobbies: 'Hiking, board games', knowFrom: 'College roommate' },
+  { id: '2', name: 'Sam Chen', tier: 2, lastInteraction: new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0], interactionType: '📱 Call', history: [], notes: '', birthday: '07/22', hobbies: 'Cooking, photography', knowFrom: 'Work' },
+  { id: '3', name: 'Jordan Lee', tier: 1, lastInteraction: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0], interactionType: '💬 Text/Chat', history: [], notes: '', birthday: '11/05', hobbies: 'Gaming, movies', knowFrom: 'High school' },
+  { id: '4', name: 'Morgan Park', tier: 3, lastInteraction: new Date(Date.now() - 20 * 86400000).toISOString().split('T')[0], interactionType: '🎉 Hangout', history: [], notes: '', birthday: '', hobbies: 'Running', knowFrom: 'Gym' },
+  { id: '5', name: 'Taylor Kim', tier: 4, lastInteraction: new Date(Date.now() - 45 * 86400000).toISOString().split('T')[0], interactionType: '📧 Email', history: [], notes: '', birthday: '01/30', hobbies: '', knowFrom: 'Conference' },
+  { id: '6', name: 'Casey Nguyen', tier: 5, lastInteraction: new Date(Date.now() - 100 * 86400000).toISOString().split('T')[0], interactionType: '🤝 Other', history: [], notes: '', birthday: '', hobbies: '', knowFrom: 'Friend of a friend' },
+];
 
 export default function HomeScreen() {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [showCalendarSync, setShowCalendarSync] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [filterTier, setFilterTier] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [view, setView] = useState<'dashboard' | 'tiers'>('dashboard');
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Load data on mount
+  useEffect(() => {
+    (async () => {
+      const onboarded = await hasOnboarded();
+      if (!onboarded) {
+        setShowOnboarding(true);
+        setLoading(false);
+        return;
+      }
+      const saved = await loadContacts();
+      setContacts(saved || SAMPLE_CONTACTS);
+      setLoading(false);
+
+      // Setup notifications
+      const granted = await requestNotificationPermission();
+      if (granted) {
+        await scheduleAllNotifications();
+        await checkAndSendNotifications();
+      }
+    })();
+  }, []);
+
+  // Save whenever contacts change
+  useEffect(() => {
+    if (!loading && contacts.length >= 0) {
+      saveContacts(contacts);
+    }
+  }, [contacts, loading]);
+
+  const handleOnboardingComplete = async () => {
+    await setOnboarded();
+    setContacts(SAMPLE_CONTACTS);
+    setShowOnboarding(false);
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 500);
+  }, []);
+
+  // Contact operations
+  const addContact = (contact: Contact) => {
+    setContacts(prev => [...prev, contact]);
+    setShowAdd(false);
+  };
+
+  const importContacts = (newContacts: Contact[]) => {
+    setContacts(prev => [...prev, ...newContacts]);
+  };
+
+  const applyCalendarSync = (updatedContacts: Contact[]) => {
+    setContacts(updatedContacts);
+  };
+
+  const logInteraction = (contactId: string, type: string, date: string) => {
+    setContacts(prev => prev.map(c => {
+      if (c.id !== contactId) return c;
+      return {
+        ...c,
+        lastInteraction: date,
+        interactionType: type,
+        history: [{ date, type }, ...(c.history || [])].slice(0, 50),
+      };
+    }));
+    // Update selected contact to reflect changes
+    setSelectedContact(prev => {
+      if (!prev || prev.id !== contactId) return prev;
+      const updated = contacts.find(c => c.id === contactId);
+      if (!updated) return prev;
+      return {
+        ...updated,
+        lastInteraction: date,
+        interactionType: type,
+        history: [{ date, type }, ...(updated.history || [])].slice(0, 50),
+      };
+    });
+  };
+
+  const updateTier = (contactId: string, tier: number) => {
+    setContacts(prev => prev.map(c => c.id === contactId ? { ...c, tier } : c));
+    setSelectedContact(prev => prev && prev.id === contactId ? { ...prev, tier } : prev);
+  };
+
+  const updateField = (contactId: string, field: string, value: string) => {
+    setContacts(prev => prev.map(c => c.id === contactId ? { ...c, [field]: value } : c));
+    setSelectedContact(prev => prev && prev.id === contactId ? { ...prev, [field]: value } : prev);
+  };
+
+  const deleteContact = (contactId: string) => {
+    setContacts(prev => prev.filter(c => c.id !== contactId));
+    setSelectedContact(null);
+  };
+
+  // Filtered and sorted contacts
+  const filtered = contacts
+    .filter(c => filterTier === 0 || c.tier === filterTier)
+    .filter(c => searchQuery === '' || c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  const sorted = sortByUrgency(filtered);
+
+  // Stats
+  const overdueCount = contacts.filter(c => {
+    const days = daysSince(c.lastInteraction);
+    return days >= (TIER_CONFIG[c.tier]?.maxDays || 30);
+  }).length;
+
+  const criticalCount = contacts.filter(c => {
+    const days = daysSince(c.lastInteraction);
+    return days >= (TIER_CONFIG[c.tier]?.maxDays || 30) * 1.5;
+  }).length;
+
+  if (showOnboarding) {
+    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
+  }
+
+  if (loading) {
+    return (
+      <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={{ color: COLORS.textMuted, fontSize: 16 }}>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.screen}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Inner Circle</Text>
-        <Text style={styles.subtitle}>FRIENDSHIP TRACKER</Text>
-      </View>
+    <View style={styles.screen}>
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.textMuted} />}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Inner Circle</Text>
+          <Text style={styles.subtitle}>FRIENDSHIP TRACKER</Text>
+        </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statNumber}>0</Text>
-          <Text style={styles.statLabel}>TOTAL</Text>
+        {/* Stats */}
+        <View style={styles.statsRow}>
+          {[
+            { label: 'TOTAL', value: contacts.length, color: COLORS.text },
+            { label: 'OVERDUE', value: overdueCount, color: COLORS.overdue },
+            { label: 'CRITICAL', value: criticalCount, color: COLORS.danger },
+          ].map((s, i) => (
+            <View key={i} style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: s.color }]}>{s.value}</Text>
+              <Text style={styles.statLabel}>{s.label}</Text>
+            </View>
+          ))}
         </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statNumber, { color: '#E87C36' }]}>0</Text>
-          <Text style={styles.statLabel}>OVERDUE</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statNumber, { color: '#E8364F' }]}>0</Text>
-          <Text style={styles.statLabel}>CRITICAL</Text>
-        </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Contacts</Text>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>😈</Text>
-          <Text style={styles.emptyText}>No contacts yet</Text>
-          <Text style={styles.emptyHint}>Add someone to start tracking</Text>
+        {/* Search */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search contacts..."
+            placeholderTextColor={COLORS.textDark}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearch}>
+              <Text style={styles.clearSearchText}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
-      </View>
 
-      <TouchableOpacity style={styles.addButton} onPress={() => alert('Add contact coming soon!')}>
-        <Text style={styles.addButtonText}>+ Add Contact</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* View toggle */}
+        <View style={styles.navRow}>
+          {(['dashboard', 'tiers'] as const).map(v => (
+            <TouchableOpacity
+              key={v}
+              onPress={() => setView(v)}
+              style={[styles.navBtn, view === v && styles.navBtnActive]}
+            >
+              <Text style={[styles.navBtnText, view === v && styles.navBtnTextActive]}>
+                {v === 'dashboard' ? '📋 Dashboard' : '🏷️ By Tier'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity onPress={() => setShowImport(true)} style={styles.importNavBtn}>
+            <Text style={styles.importNavBtnText}>📱</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowCalendarSync(true)} style={styles.importNavBtn}>
+            <Text style={styles.importNavBtnText}>📅</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addBtn}>
+            <Text style={styles.addBtnText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tier filters (dashboard only) */}
+        {view === 'dashboard' && (
+          <View style={styles.filterRow}>
+            <TouchableOpacity
+              onPress={() => setFilterTier(0)}
+              style={[styles.filterChip, filterTier === 0 && styles.filterChipActive]}
+            >
+              <Text style={[styles.filterChipText, filterTier === 0 && styles.filterChipTextActive]}>All</Text>
+            </TouchableOpacity>
+            {[1, 2, 3, 4, 5].map(t => (
+              <TouchableOpacity
+                key={t}
+                onPress={() => setFilterTier(t)}
+                style={[
+                  styles.filterChip,
+                  filterTier === t && { backgroundColor: TIER_CONFIG[t].bg, borderColor: TIER_CONFIG[t].border },
+                ]}
+              >
+                <Text style={[styles.filterChipText, filterTier === t && { color: TIER_CONFIG[t].color }]}>
+                  {TIER_CONFIG[t].emoji} T{t}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Dashboard view */}
+        {view === 'dashboard' && (
+          <View style={styles.section}>
+            {sorted.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>
+                  {searchQuery ? '🔍' : '👋'}
+                </Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'No matches found' : 'No contacts yet'}
+                </Text>
+                <Text style={styles.emptyHint}>
+                  {searchQuery ? 'Try a different search' : 'Tap + Add to get started'}
+                </Text>
+              </View>
+            ) : (
+              sorted.map(contact => (
+                <ContactCard
+                  key={contact.id}
+                  contact={contact}
+                  onPress={() => setSelectedContact(contact)}
+                  onLongPress={() => deleteContact(contact.id)}
+                />
+              ))
+            )}
+          </View>
+        )}
+
+        {/* Tiers view */}
+        {view === 'tiers' && (
+          <View style={styles.section}>
+            {[1, 2, 3, 4, 5].map(tier => {
+              const config = TIER_CONFIG[tier];
+              const tierContacts = sortByUrgency(
+                contacts.filter(c => c.tier === tier)
+                  .filter(c => searchQuery === '' || c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              );
+              return (
+                <View key={tier} style={styles.tierGroup}>
+                  <View style={[styles.tierHeader, { backgroundColor: config.bg, borderColor: config.border }]}>
+                    <Text style={{ fontSize: 18 }}>{config.emoji}</Text>
+                    <View>
+                      <Text style={[styles.tierHeaderTitle, { color: config.color }]}>
+                        Tier {tier} — {config.label}
+                      </Text>
+                      <Text style={styles.tierHeaderSub}>
+                        Every {config.maxDays}d · {tierContacts.length} {tierContacts.length === 1 ? 'person' : 'people'}
+                      </Text>
+                    </View>
+                  </View>
+                  {tierContacts.length === 0 ? (
+                    <Text style={styles.tierEmpty}>No contacts in this tier</Text>
+                  ) : (
+                    tierContacts.map(contact => (
+                      <ContactCard
+                        key={contact.id}
+                        contact={contact}
+                        onPress={() => setSelectedContact(contact)}
+                        onLongPress={() => deleteContact(contact.id)}
+                      />
+                    ))
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+
+      {/* Modals */}
+      <AddContactModal
+        visible={showAdd}
+        onClose={() => setShowAdd(false)}
+        onAdd={addContact}
+      />
+
+      <ImportContactsModal
+        visible={showImport}
+        onClose={() => setShowImport(false)}
+        onImport={importContacts}
+        existingNames={contacts.map(c => c.name)}
+      />
+
+      <CalendarSyncModal
+        visible={showCalendarSync}
+        onClose={() => setShowCalendarSync(false)}
+        contacts={contacts}
+        onApply={applyCalendarSync}
+      />
+
+      <ContactDetailModal
+        contact={selectedContact}
+        visible={!!selectedContact}
+        onClose={() => setSelectedContact(null)}
+        onLogInteraction={logInteraction}
+        onUpdateTier={updateTier}
+        onUpdateField={updateField}
+        onDelete={deleteContact}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#0D0D12',
-  },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 20,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#E8E6E1',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#6B6760',
-    letterSpacing: 2,
-    marginTop: 4,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 10,
-    marginBottom: 24,
-  },
+  screen: { flex: 1, backgroundColor: COLORS.bg },
+  header: { paddingTop: 60, paddingBottom: 16, alignItems: 'center' },
+  title: { fontSize: 32, fontWeight: 'bold', color: COLORS.text },
+  subtitle: { fontSize: 13, color: COLORS.textMuted, letterSpacing: 2, marginTop: 4 },
+  statsRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 16 },
   statBox: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    padding: 14,
-    alignItems: 'center',
+    flex: 1, backgroundColor: COLORS.cardBg, borderRadius: 14,
+    borderWidth: 1, borderColor: COLORS.cardBorder, padding: 14, alignItems: 'center',
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#E8E6E1',
+  statNumber: { fontSize: 22, fontWeight: 'bold' },
+  statLabel: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1, marginTop: 2 },
+  searchContainer: { paddingHorizontal: 16, marginBottom: 12, position: 'relative' },
+  searchInput: {
+    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    padding: 12, paddingRight: 40, fontSize: 15, color: COLORS.text,
   },
-  statLabel: {
-    fontSize: 11,
-    color: '#6B6760',
-    letterSpacing: 1,
-    marginTop: 2,
+  clearSearch: { position: 'absolute', right: 28, top: 12, padding: 4 },
+  clearSearchText: { color: COLORS.textMuted, fontSize: 16 },
+  navRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 6, marginBottom: 12 },
+  navBtn: { flex: 1, padding: 10, borderRadius: 10, alignItems: 'center' },
+  navBtnActive: { backgroundColor: 'rgba(255,255,255,0.1)' },
+  navBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+  navBtnTextActive: { color: COLORS.text },
+  addBtn: { padding: 10, paddingHorizontal: 14, borderRadius: 10, backgroundColor: COLORS.accent },
+  addBtnText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  importNavBtn: {
+    padding: 10, paddingHorizontal: 14, borderRadius: 10,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
+  importNavBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  filterRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 5, marginBottom: 16, flexWrap: 'wrap' },
+  filterChip: {
+    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'transparent',
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#E8E6E1',
-    marginBottom: 12,
-  },
+  filterChipActive: { backgroundColor: 'rgba(255,255,255,0.12)' },
+  filterChipText: { fontSize: 12, color: COLORS.textMuted },
+  filterChipTextActive: { color: COLORS.text },
+  section: { paddingHorizontal: 16 },
   emptyState: {
-    alignItems: 'center',
-    padding: 40,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center', padding: 40, backgroundColor: COLORS.cardBg,
+    borderRadius: 14, borderWidth: 1, borderColor: COLORS.cardBorder,
   },
-  emptyEmoji: {
-    fontSize: 40,
-    marginBottom: 12,
+  emptyEmoji: { fontSize: 40, marginBottom: 12 },
+  emptyText: { fontSize: 16, color: COLORS.text, fontWeight: '600' },
+  emptyHint: { fontSize: 13, color: COLORS.textMuted, marginTop: 4 },
+  tierGroup: { marginBottom: 20 },
+  tierHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10,
+    padding: 10, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#E8E6E1',
-    fontWeight: '600',
-  },
-  emptyHint: {
-    fontSize: 13,
-    color: '#6B6760',
-    marginTop: 4,
-  },
-  addButton: {
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginBottom: 40,
-    backgroundColor: '#dc6e6ee9',
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  });
+  tierHeaderTitle: { fontSize: 14, fontWeight: '600' },
+  tierHeaderSub: { fontSize: 11, color: COLORS.textMuted },
+  tierEmpty: { padding: 12, fontSize: 13, color: COLORS.textDark, fontStyle: 'italic', paddingLeft: 8 },
+});
