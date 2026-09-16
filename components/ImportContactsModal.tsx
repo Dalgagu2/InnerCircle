@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, Modal, ScrollView,
   StyleSheet, ActivityIndicator, Alert, TextInput, Platform,
 } from 'react-native';
-import * as Contacts from 'expo-contacts';
+import * as Contacts from 'expo-contacts/legacy';
 import { TIER_CONFIG, COLORS } from '../constants/theme';
 import { Contact } from '../constants/types';
 
