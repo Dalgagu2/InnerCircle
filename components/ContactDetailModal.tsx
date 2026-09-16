@@ -4,6 +4,7 @@ import {
   StyleSheet, Alert, TextInput, Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import ContactAvatar from './ContactAvatar';
 import { TIER_CONFIG, INTERACTION_TYPES, COLORS } from '../constants/theme';
 import { Contact } from '../constants/types';
 import { formatDays, getUrgencyForContact } from '../utils/time';
@@ -108,11 +109,14 @@ export default function ContactDetailModal({
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Header */}
             <View style={styles.header}>
-              <View>
-                <Text style={styles.name}>{contact.name}</Text>
-                <Text style={[styles.tierLabel, { color: tier.color }]}>
-                  {tier.emoji} {tier.label}
-                </Text>
+              <View style={styles.headerLeft}>
+                <ContactAvatar name={contact.name} photoUri={contact.photoUri} size={56} borderColor={tier.color} />
+                <View>
+                  <Text style={styles.name}>{contact.name}</Text>
+                  <Text style={[styles.tierLabel, { color: tier.color }]}>
+                    {tier.emoji} {tier.label}
+                  </Text>
+                </View>
               </View>
               <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
                 <Text style={styles.deleteBtnText}>Delete</Text>
@@ -266,6 +270,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderBottomWidth: 0,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
   name: { fontSize: 24, fontWeight: 'bold', color: COLORS.text },
   tierLabel: { fontSize: 14, marginTop: 4 },
   deleteBtn: {

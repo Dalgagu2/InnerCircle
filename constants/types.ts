@@ -14,4 +14,5 @@ export interface Contact {
   birthday: string;
   hobbies: string;
   knowFrom: string;
+  photoUri?: string;
 }

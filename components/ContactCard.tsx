@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import ContactAvatar from './ContactAvatar';
 import { TIER_CONFIG, COLORS } from '../constants/theme';
 import { Contact } from '../constants/types';
 import { formatDays, getUrgencyForContact } from '../utils/time';
@@ -26,8 +27,8 @@ export default function ContactCard({ contact, onPress, onLongPress }: ContactCa
     >
       <View style={styles.topRow}>
         <View style={styles.leftSection}>
-          <View style={[styles.avatar, { borderColor: tier.color }]}>
-            <Text style={styles.avatarText}>{contact.name.charAt(0).toUpperCase()}</Text>
+          <View style={styles.avatarWrap}>
+            <ContactAvatar name={contact.name} photoUri={contact.photoUri} size={42} borderColor={tier.color} />
           </View>
           <View style={styles.info}>
             <Text style={styles.name}>{contact.name}</Text>
@@ -94,20 +95,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  avatarWrap: {
     marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   info: {
     flex: 1,

@@ -4,14 +4,17 @@ import {
   StyleSheet, ActivityIndicator, Alert, TextInput, Platform,
 } from 'react-native';
 import * as Contacts from 'expo-contacts/legacy';
+import ContactAvatar from './ContactAvatar';
 import { TIER_CONFIG, COLORS } from '../constants/theme';
 import { Contact } from '../constants/types';
+import { resolveContactPhotoUri } from '../utils/contactPhoto';
 
 interface PhoneContact {
   id: string;
   name: string;
   birthday: string;
   company: string;
+  image?: Contacts.Image;
 }
 
 interface ImportContactsModalProps {
@@ -29,6 +32,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [tier, setTier] = useState(3);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [sessionImportedNames, setSessionImportedNames] = useState<string[]>([]);
@@ -43,6 +47,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
       setSearchQuery('');
       setPhoneContacts([]);
       setSuccessMessage('');
+      setImporting(false);
       setSessionImportedNames([]);
       setPickedContact(null);
     }
@@ -85,12 +90,20 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
       // Get company
       const company = contact.company || contact.department || '';
 
+      // The picker doesn't always include image bytes even when a photo exists
+      let image = contact.image;
+      if (!image && contact.imageAvailable) {
+        const full = await Contacts.getContactByIdAsync(contact.id, [Contacts.Fields.Image]);
+        image = full?.image;
+      }
+
       setPickedContact({
         // eslint-disable-next-line react-hooks/purity -- runs in a press handler, not during render
         id: contact.id || Date.now().toString(),
         name: name.trim(),
         birthday,
         company,
+        image,
       });
       setMode('pick');
     } catch (error: any) {
@@ -108,8 +121,11 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
     }
   };
 
-  const confirmPickedContact = () => {
+  const confirmPickedContact = async () => {
     if (!pickedContact) return;
+    setImporting(true);
+
+    const photoUri = await resolveContactPhotoUri(pickedContact.image);
 
     const newContact: Contact = {
       id: 'imp_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
@@ -122,12 +138,14 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
       hobbies: '',
       knowFrom: pickedContact.company,
       notes: '',
+      photoUri,
     };
 
     onImport([newContact]);
     setSessionImportedNames(prev => [...prev, pickedContact.name]);
     setSuccessMessage(`✅ Added ${pickedContact.name}!`);
     setPickedContact(null);
+    setImporting(false);
     setMode('choose');
     setTimeout(() => setSuccessMessage(''), 4000);
   };
@@ -156,6 +174,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
           Contacts.Fields.LastName,
           Contacts.Fields.Birthday,
           Contacts.Fields.Company,
+          Contacts.Fields.Image,
         ],
         sort: Contacts.SortTypes.FirstName,
       });
@@ -177,6 +196,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
             name: c.name || '',
             birthday,
             company: c.company || '',
+            image: c.image,
           };
         });
 
@@ -203,28 +223,33 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
       : setSelected(new Set(filtered.map(c => c.id)));
   };
 
-  const handleBulkImport = () => {
+  const handleBulkImport = async () => {
     const toImport = phoneContacts.filter(c => selected.has(c.id));
     if (toImport.length === 0) return;
+    setImporting(true);
     const count = toImport.length;
     const importedNames = toImport.map(c => c.name);
 
-    const newContacts: Contact[] = toImport.map(c => ({
-      id: 'imp_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
-      name: c.name,
-      tier,
-      lastInteraction: null,
-      interactionType: null,
-      history: [],
-      birthday: c.birthday,
-      hobbies: '',
-      knowFrom: c.company,
-      notes: '',
-    }));
+    const newContacts: Contact[] = await Promise.all(
+      toImport.map(async c => ({
+        id: 'imp_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
+        name: c.name,
+        tier,
+        lastInteraction: null,
+        interactionType: null,
+        history: [],
+        birthday: c.birthday,
+        hobbies: '',
+        knowFrom: c.company,
+        notes: '',
+        photoUri: await resolveContactPhotoUri(c.image),
+      }))
+    );
 
     onImport(newContacts);
     setSessionImportedNames(prev => [...prev, ...importedNames]);
     setSelected(new Set());
+    setImporting(false);
     setSuccessMessage(`✅ Imported ${count} ${count === 1 ? 'contact' : 'contacts'}!`);
     setTimeout(() => setSuccessMessage(''), 4000);
   };
@@ -319,8 +344,8 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
           {mode === 'pick' && pickedContact && (
             <View>
               <View style={styles.pickedCard}>
-                <View style={styles.pickedAvatar}>
-                  <Text style={styles.pickedAvatarText}>{pickedContact.name.charAt(0).toUpperCase()}</Text>
+                <View style={styles.pickedAvatarWrap}>
+                  <ContactAvatar name={pickedContact.name} photoUri={pickedContact.image?.uri} size={60} borderColor={COLORS.accent} />
                 </View>
                 <Text style={styles.pickedName}>{pickedContact.name}</Text>
                 {pickedContact.birthday ? <Text style={styles.pickedMeta}>🎂 {pickedContact.birthday}</Text> : null}
@@ -333,8 +358,16 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
                 <TouchableOpacity style={styles.backBtn} onPress={() => { setPickedContact(null); setMode('choose'); }}>
                   <Text style={styles.backBtnText}>Back</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.importBtn} onPress={confirmPickedContact}>
-                  <Text style={styles.importBtnText}>Add {pickedContact.name.split(' ')[0]}</Text>
+                <TouchableOpacity
+                  style={[styles.importBtn, importing && { opacity: 0.6 }]}
+                  onPress={confirmPickedContact}
+                  disabled={importing}
+                >
+                  {importing ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.importBtnText}>Add {pickedContact.name.split(' ')[0]}</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -397,6 +430,9 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
                             <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
                               {isSelected && <Text style={styles.checkmark}>✓</Text>}
                             </View>
+                            <View style={styles.contactRowAvatar}>
+                              <ContactAvatar name={contact.name} photoUri={contact.image?.uri} size={36} />
+                            </View>
                             <View style={styles.contactInfo}>
                               <Text style={styles.contactName}>{contact.name}</Text>
                               <View style={styles.contactMeta}>
@@ -417,13 +453,17 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
                       <Text style={styles.backBtnText}>Back</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.importBtn, selectedCount === 0 && { opacity: 0.35 }]}
+                      style={[styles.importBtn, (selectedCount === 0 || importing) && { opacity: 0.35 }]}
                       onPress={handleBulkImport}
-                      disabled={selectedCount === 0}
+                      disabled={selectedCount === 0 || importing}
                     >
-                      <Text style={styles.importBtnText}>
-                        {selectedCount === 0 ? 'Select contacts' : `Import ${selectedCount}`}
-                      </Text>
+                      {importing ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={styles.importBtnText}>
+                          {selectedCount === 0 ? 'Select contacts' : `Import ${selectedCount}`}
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   </View>
                 </>
@@ -468,11 +508,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', padding: 24, marginBottom: 16, borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
-  pickedAvatar: {
-    width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.accent + '20',
-    borderWidth: 2, borderColor: COLORS.accent + '50', alignItems: 'center', justifyContent: 'center', marginBottom: 12,
-  },
-  pickedAvatarText: { fontSize: 24, fontWeight: 'bold', color: COLORS.text },
+  pickedAvatarWrap: { marginBottom: 12 },
   pickedName: { fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 6 },
   pickedMeta: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
   tierSection: { marginBottom: 14 },
@@ -516,6 +552,7 @@ const styles = StyleSheet.create({
   },
   checkboxSelected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   checkmark: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  contactRowAvatar: { marginRight: 10 },
   contactInfo: { flex: 1 },
   contactName: { fontSize: 15, fontWeight: '500', color: COLORS.text },
   contactMeta: { flexDirection: 'row', gap: 10, marginTop: 3 },
