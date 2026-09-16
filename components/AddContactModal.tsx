@@ -4,7 +4,9 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TIER_CONFIG, COLORS } from '../constants/theme';
+import Icon, { tierIconName } from './Icon';
+import { TIER_CONFIG, tierTextColor, useColors, useColorSchemeName } from '../constants/theme';
+import { FONTS } from '../constants/fonts';
 import { Contact } from '../constants/types';
 
 interface AddContactModalProps {
@@ -14,6 +16,10 @@ interface AddContactModalProps {
 }
 
 export default function AddContactModal({ visible, onClose, onAdd }: AddContactModalProps) {
+  const colors = useColors();
+  const scheme = useColorSchemeName();
+  const styles = makeStyles(colors);
+
   const [name, setName] = useState('');
   const [tier, setTier] = useState(3);
   const [birthday, setBirthday] = useState('');
@@ -73,7 +79,7 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
               <TextInput
                 style={styles.input}
                 placeholder="Enter name..."
-                placeholderTextColor={COLORS.textDark}
+                placeholderTextColor={colors.textDark}
                 value={name}
                 onChangeText={setName}
                 autoFocus
@@ -93,22 +99,25 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
                         selected && { backgroundColor: config.color + '20', borderColor: config.color + '60' },
                       ]}
                     >
-                      <Text style={styles.tierEmoji}>{config.emoji}</Text>
-                      <Text style={[styles.tierNum, selected && { color: config.color }]}>T{t}</Text>
+                      <Icon name={tierIconName(t)} size={18} color={selected ? tierTextColor(t, scheme) : colors.textMuted} />
+                      <Text style={[styles.tierNum, selected && { color: tierTextColor(t, scheme) }]}>T{t}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
               <View style={styles.tierDesc}>
-                <Text style={[styles.tierDescText, { color: TIER_CONFIG[tier].color }]}>
-                  {TIER_CONFIG[tier].emoji} {TIER_CONFIG[tier].label}
-                </Text>
+                <View style={styles.tierDescRow}>
+                  <Icon name={tierIconName(tier)} size={14} color={tierTextColor(tier, scheme)} />
+                  <Text style={[styles.tierDescText, { color: tierTextColor(tier, scheme) }]}>
+                    {TIER_CONFIG[tier].label}
+                  </Text>
+                </View>
                 <Text style={styles.tierDescSub}>
                   Reach out every {TIER_CONFIG[tier].maxDays} days
                 </Text>
               </View>
 
-              <Text style={styles.label}>🎂 BIRTHDAY (OPTIONAL)</Text>
+              <Text style={styles.label}>BIRTHDAY (OPTIONAL)</Text>
               <TouchableOpacity
                 style={styles.datePickerBtn}
                 onPress={() => setShowDatePicker(true)}
@@ -116,7 +125,7 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
                 <Text style={birthday ? styles.datePickerText : styles.datePickerPlaceholder}>
                   {birthday || 'Tap to select birthday...'}
                 </Text>
-                <Text style={styles.datePickerIcon}>📅</Text>
+                <Icon name="calendar" size={16} color={colors.textMuted} />
               </TouchableOpacity>
               {showDatePicker && (
                 <DateTimePicker
@@ -134,7 +143,7 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
                     }
                   }}
                   maximumDate={new Date()}
-                  themeVariant="dark"
+                  themeVariant={scheme}
                 />
               )}
               {Platform.OS === 'ios' && showDatePicker && (
@@ -143,30 +152,30 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
                 </TouchableOpacity>
               )}
 
-              <Text style={styles.label}>🏠 HOW DO I KNOW THEM? (OPTIONAL)</Text>
+              <Text style={styles.label}>HOW DO I KNOW THEM? (OPTIONAL)</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Work, college, gym, mutual friend..."
-                placeholderTextColor={COLORS.textDark}
+                placeholderTextColor={colors.textDark}
                 value={knowFrom}
                 onChangeText={setKnowFrom}
               />
 
-              <Text style={styles.label}>🎯 HOBBIES IN COMMON (OPTIONAL)</Text>
+              <Text style={styles.label}>HOBBIES IN COMMON (OPTIONAL)</Text>
               <TextInput
                 style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
                 placeholder="Gaming, hiking, cooking..."
-                placeholderTextColor={COLORS.textDark}
+                placeholderTextColor={colors.textDark}
                 value={hobbies}
                 onChangeText={setHobbies}
                 multiline
               />
 
-              <Text style={styles.label}>📝 NOTES (OPTIONAL)</Text>
+              <Text style={styles.label}>NOTES (OPTIONAL)</Text>
               <TextInput
                 style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
                 placeholder="Anything else to remember..."
-                placeholderTextColor={COLORS.textDark}
+                placeholderTextColor={colors.textDark}
                 value={notes}
                 onChangeText={setNotes}
                 multiline
@@ -191,48 +200,47 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' },
+const makeStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   content: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 24, paddingBottom: 40,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderBottomWidth: 0,
+    borderWidth: 1, borderColor: colors.cardBorder, borderBottomWidth: 0,
     maxHeight: '85%',
   },
-  title: { fontSize: 22, fontWeight: 'bold', color: COLORS.text, marginBottom: 20 },
-  label: { fontSize: 12, color: COLORS.textMuted, letterSpacing: 1, marginBottom: 8 },
+  title: { fontSize: 22, fontFamily: FONTS.displayBold, color: colors.text, marginBottom: 20 },
+  label: { fontSize: 11, fontFamily: FONTS.bodySemiBold, color: colors.textMuted, letterSpacing: 1.2, marginBottom: 8 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    padding: 14, fontSize: 16, color: COLORS.text, marginBottom: 20,
+    backgroundColor: colors.cardBg, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.cardBorder,
+    padding: 14, fontSize: 16, fontFamily: FONTS.body, color: colors.text, marginBottom: 20,
   },
   tierRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   tierOption: {
-    flex: 1, alignItems: 'center', padding: 12, borderRadius: 12,
-    borderWidth: 2, borderColor: 'transparent', backgroundColor: 'rgba(255,255,255,0.04)',
+    flex: 1, alignItems: 'center', gap: 5, padding: 12, borderRadius: 14,
+    borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.cardBg,
   },
-  tierEmoji: { fontSize: 20, marginBottom: 4 },
-  tierNum: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  tierNum: { fontSize: 12, fontFamily: FONTS.bodySemiBold, color: colors.textMuted },
   tierDesc: { alignItems: 'center', marginBottom: 20 },
-  tierDescText: { fontSize: 14, fontWeight: '600' },
-  tierDescSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  tierDescRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tierDescText: { fontSize: 14, fontFamily: FONTS.bodySemiBold },
+  tierDescSub: { fontSize: 12, fontFamily: FONTS.body, color: colors.textMuted, marginTop: 3 },
   buttons: { flexDirection: 'row', gap: 10 },
   datePickerBtn: {
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: colors.cardBg, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.cardBorder,
     padding: 14, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  datePickerText: { fontSize: 16, color: COLORS.text },
-  datePickerPlaceholder: { fontSize: 16, color: COLORS.textDark },
-  datePickerIcon: { fontSize: 18 },
+  datePickerText: { fontSize: 16, fontFamily: FONTS.body, color: colors.text },
+  datePickerPlaceholder: { fontSize: 16, fontFamily: FONTS.body, color: colors.textDark },
   dateDoneBtn: { alignSelf: 'flex-end', padding: 8, paddingHorizontal: 16, marginBottom: 12 },
-  dateDoneText: { color: COLORS.accent, fontSize: 15, fontWeight: '600' },
+  dateDoneText: { color: colors.accent, fontSize: 15, fontFamily: FONTS.bodySemiBold },
   cancelBtn: {
-    flex: 1, padding: 14, borderRadius: 12, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    flex: 1, padding: 14, borderRadius: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
-  cancelText: { color: COLORS.textMuted, fontSize: 16, fontWeight: '600' },
-  saveBtn: { flex: 2, padding: 14, borderRadius: 12, alignItems: 'center', backgroundColor: COLORS.accent },
-  saveText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  cancelText: { color: colors.textMuted, fontSize: 16, fontFamily: FONTS.bodySemiBold },
+  saveBtn: { flex: 2, padding: 14, borderRadius: 14, alignItems: 'center', backgroundColor: colors.accent },
+  saveText: { color: '#FFFFFF', fontSize: 16, fontFamily: FONTS.bodySemiBold },
 });

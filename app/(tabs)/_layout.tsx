@@ -1,23 +1,27 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import Icon, { IconName } from '../../components/Icon';
+import { useColors } from '../../constants/theme';
+import { FONTS } from '../../constants/fonts';
 
 export default function TabLayout() {
+  const colors = useColors();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#0D0D12',
-          borderTopColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: colors.surface,
+          borderTopColor: colors.cardBorder,
           borderTopWidth: 1,
           height: 85,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: '#E8364F',
-        tabBarInactiveTintColor: '#6B6760',
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '600',
+          fontFamily: FONTS.bodySemiBold,
         },
       }}
     >
@@ -25,20 +29,20 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: () => <TabIcon label="🏠" />,
+          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: () => <TabIcon label="⚙️" />,
+          tabBarIcon: ({ color }) => <TabIcon name="gear" color={color} />,
         }}
       />
     </Tabs>
   );
 }
 
-function TabIcon({ label }: { label: string }) {
-  return <Text style={{ fontSize: 22 }}>{label}</Text>;
+function TabIcon({ name, color }: { name: IconName; color: string | { toString(): string } }) {
+  return <Icon name={name} size={22} color={String(color)} strokeWidth={1.8} />;
 }

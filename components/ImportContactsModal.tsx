@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import * as Contacts from 'expo-contacts/legacy';
 import ContactAvatar from './ContactAvatar';
-import { TIER_CONFIG, COLORS } from '../constants/theme';
+import Icon, { tierIconName } from './Icon';
+import { TIER_CONFIG, tierTextColor, useColors, useColorSchemeName } from '../constants/theme';
+import { FONTS } from '../constants/fonts';
 import { Contact } from '../constants/types';
 import { resolveContactPhotoUri } from '../utils/contactPhoto';
 
@@ -27,6 +29,10 @@ interface ImportContactsModalProps {
 type Mode = 'choose' | 'pick' | 'bulk';
 
 export default function ImportContactsModal({ visible, onClose, onImport, existingNames }: ImportContactsModalProps) {
+  const colors = useColors();
+  const scheme = useColorSchemeName();
+  const styles = makeStyles(colors);
+
   const [mode, setMode] = useState<Mode>('choose');
   const [phoneContacts, setPhoneContacts] = useState<PhoneContact[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -143,7 +149,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
 
     onImport([newContact]);
     setSessionImportedNames(prev => [...prev, pickedContact.name]);
-    setSuccessMessage(`✅ Added ${pickedContact.name}!`);
+    setSuccessMessage(`Added ${pickedContact.name}!`);
     setPickedContact(null);
     setImporting(false);
     setMode('choose');
@@ -250,7 +256,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
     setSessionImportedNames(prev => [...prev, ...importedNames]);
     setSelected(new Set());
     setImporting(false);
-    setSuccessMessage(`✅ Imported ${count} ${count === 1 ? 'contact' : 'contacts'}!`);
+    setSuccessMessage(`Imported ${count} ${count === 1 ? 'contact' : 'contacts'}!`);
     setTimeout(() => setSuccessMessage(''), 4000);
   };
 
@@ -277,8 +283,8 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
               onPress={() => setTier(t)}
               style={[styles.tierOption, isSelected && { backgroundColor: config.color + '20', borderColor: config.color + '60' }]}
             >
-              <Text style={styles.tierEmoji}>{config.emoji}</Text>
-              <Text style={[styles.tierNum, isSelected && { color: config.color }]}>T{t}</Text>
+              <Icon name={tierIconName(t)} size={15} color={isSelected ? tierTextColor(t, scheme) : colors.textMuted} />
+              <Text style={[styles.tierNum, isSelected && { color: tierTextColor(t, scheme) }]}>T{t}</Text>
             </TouchableOpacity>
           );
         })}
@@ -296,13 +302,14 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
           <View style={styles.headerRow}>
             <Text style={styles.title}>Import Contacts</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeX}>
-              <Text style={styles.closeXText}>✕</Text>
+              <Icon name="close" size={14} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           {/* Success banner */}
           {successMessage !== '' && (
             <View style={styles.successBanner}>
+              <Icon name="check" size={14} color={colors.success} />
               <Text style={styles.successText}>{successMessage}</Text>
             </View>
           )}
@@ -313,7 +320,9 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
               <Text style={styles.modeDesc}>How would you like to import contacts?</Text>
 
               <TouchableOpacity style={styles.modeCard} onPress={pickSingleContact}>
-                <Text style={styles.modeCardEmoji}>👆</Text>
+                <View style={styles.modeCardIcon}>
+                  <Icon name="user-plus" size={20} color={colors.accent} />
+                </View>
                 <View style={styles.modeCardInfo}>
                   <Text style={styles.modeCardTitle}>Pick One at a Time</Text>
                   <Text style={styles.modeCardDesc}>
@@ -323,7 +332,9 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.modeCard} onPress={startBulkImport}>
-                <Text style={styles.modeCardEmoji}>📋</Text>
+                <View style={styles.modeCardIcon}>
+                  <Icon name="list" size={20} color={colors.accent} />
+                </View>
                 <View style={styles.modeCardInfo}>
                   <Text style={styles.modeCardTitle}>Bulk Import</Text>
                   <Text style={styles.modeCardDesc}>
@@ -345,11 +356,11 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
             <View>
               <View style={styles.pickedCard}>
                 <View style={styles.pickedAvatarWrap}>
-                  <ContactAvatar name={pickedContact.name} photoUri={pickedContact.image?.uri} size={60} borderColor={COLORS.accent} />
+                  <ContactAvatar name={pickedContact.name} photoUri={pickedContact.image?.uri} size={60} borderColor={colors.accent} />
                 </View>
                 <Text style={styles.pickedName}>{pickedContact.name}</Text>
-                {pickedContact.birthday ? <Text style={styles.pickedMeta}>🎂 {pickedContact.birthday}</Text> : null}
-                {pickedContact.company ? <Text style={styles.pickedMeta}>🏢 {pickedContact.company}</Text> : null}
+                {pickedContact.birthday ? <Text style={styles.pickedMeta}>{pickedContact.birthday}</Text> : null}
+                {pickedContact.company ? <Text style={styles.pickedMeta}>{pickedContact.company}</Text> : null}
               </View>
 
               {renderTierSelector()}
@@ -378,7 +389,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
             <>
               {loading ? (
                 <View style={styles.centered}>
-                  <ActivityIndicator size="large" color={COLORS.accent} />
+                  <ActivityIndicator size="large" color={colors.accent} />
                   <Text style={styles.loadingText}>Reading your contacts...</Text>
                 </View>
               ) : (
@@ -387,7 +398,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
                     <TextInput
                       style={styles.searchInput}
                       placeholder="Search contacts..."
-                      placeholderTextColor={COLORS.textDark}
+                      placeholderTextColor={colors.textDark}
                       value={searchQuery}
                       onChangeText={setSearchQuery}
                     />
@@ -407,9 +418,11 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
                   <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
                     {filtered.length === 0 ? (
                       <View style={styles.centered}>
-                        <Text style={styles.emptyEmoji}>
-                          {searchQuery ? '🔍' : phoneContacts.length === 0 ? '📵' : '✅'}
-                        </Text>
+                        <Icon
+                          name={searchQuery ? 'search' : phoneContacts.length === 0 ? 'no-signal' : 'check'}
+                          size={30}
+                          color={colors.textMuted}
+                        />
                         <Text style={styles.emptyText}>
                           {searchQuery
                             ? 'No matches'
@@ -428,7 +441,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
                             style={[styles.contactRow, isSelected && styles.contactRowSelected]}
                           >
                             <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                              {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                              {isSelected && <Icon name="check" size={12} color="#fff" strokeWidth={3} />}
                             </View>
                             <View style={styles.contactRowAvatar}>
                               <ContactAvatar name={contact.name} photoUri={contact.image?.uri} size={36} />
@@ -436,8 +449,8 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
                             <View style={styles.contactInfo}>
                               <Text style={styles.contactName}>{contact.name}</Text>
                               <View style={styles.contactMeta}>
-                                {contact.birthday ? <Text style={styles.metaTag}>🎂 {contact.birthday}</Text> : null}
-                                {contact.company ? <Text style={styles.metaTag}>🏢 {contact.company}</Text> : null}
+                                {contact.birthday ? <Text style={styles.metaTag}>{contact.birthday}</Text> : null}
+                                {contact.company ? <Text style={styles.metaTag}>{contact.company}</Text> : null}
                               </View>
                             </View>
                           </TouchableOpacity>
@@ -477,86 +490,86 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' },
+const makeStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   content: {
-    backgroundColor: COLORS.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: 36, maxHeight: '92%',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderBottomWidth: 0,
+    borderWidth: 1, borderColor: colors.cardBorder, borderBottomWidth: 0,
   },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: 'bold', color: COLORS.text },
-  closeX: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  closeXText: { color: COLORS.textMuted, fontSize: 16, fontWeight: '600' },
+  title: { fontSize: 22, fontFamily: FONTS.displayBold, color: colors.text },
+  closeX: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.cardBg, alignItems: 'center', justifyContent: 'center' },
   successBanner: {
-    padding: 12, borderRadius: 10, marginBottom: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center',
+    padding: 12, borderRadius: 12, marginBottom: 12,
     backgroundColor: 'rgba(74,222,128,0.1)', borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)',
   },
-  successText: { color: '#4ADE80', fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  modeDesc: { fontSize: 14, color: COLORS.textMuted, marginBottom: 16 },
+  successText: { color: colors.success, fontSize: 13, fontFamily: FONTS.bodySemiBold, textAlign: 'center' },
+  modeDesc: { fontSize: 14, fontFamily: FONTS.body, color: colors.textMuted, marginBottom: 16 },
   modeCard: {
     flexDirection: 'row', alignItems: 'center', padding: 16, marginBottom: 10,
-    borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16, backgroundColor: colors.cardBg,
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
-  modeCardEmoji: { fontSize: 32, marginRight: 14 },
+  modeCardIcon: {
+    width: 44, height: 44, borderRadius: 14, marginRight: 14,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent + '18',
+  },
   modeCardInfo: { flex: 1 },
-  modeCardTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: 4 },
-  modeCardDesc: { fontSize: 13, color: COLORS.textMuted, lineHeight: 18 },
-  sessionCount: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginTop: 10 },
+  modeCardTitle: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text, marginBottom: 4 },
+  modeCardDesc: { fontSize: 13, fontFamily: FONTS.body, color: colors.textMuted, lineHeight: 18 },
+  sessionCount: { fontSize: 13, fontFamily: FONTS.body, color: colors.textMuted, textAlign: 'center', marginTop: 10 },
   pickedCard: {
-    alignItems: 'center', padding: 24, marginBottom: 16, borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', padding: 24, marginBottom: 16, borderRadius: 18,
+    backgroundColor: colors.cardBg, borderWidth: 1, borderColor: colors.cardBorder,
   },
   pickedAvatarWrap: { marginBottom: 12 },
-  pickedName: { fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 6 },
-  pickedMeta: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+  pickedName: { fontSize: 20, fontFamily: FONTS.displayBold, color: colors.text, marginBottom: 6 },
+  pickedMeta: { fontSize: 13, fontFamily: FONTS.body, color: colors.textMuted, marginTop: 2 },
   tierSection: { marginBottom: 14 },
-  label: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1, marginBottom: 8 },
+  label: { fontSize: 11, fontFamily: FONTS.bodySemiBold, color: colors.textMuted, letterSpacing: 1.2, marginBottom: 8 },
   tierRow: { flexDirection: 'row', gap: 6 },
   tierOption: {
-    flex: 1, alignItems: 'center', padding: 10, borderRadius: 10,
-    borderWidth: 2, borderColor: 'transparent', backgroundColor: 'rgba(255,255,255,0.04)',
+    flex: 1, alignItems: 'center', gap: 3, padding: 10, borderRadius: 12,
+    borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.cardBg,
   },
-  tierEmoji: { fontSize: 16, marginBottom: 2 },
-  tierNum: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
+  tierNum: { fontSize: 11, fontFamily: FONTS.bodySemiBold, color: colors.textMuted },
   bottomButtons: { flexDirection: 'row', gap: 10, marginTop: 4 },
   backBtn: {
-    flex: 1, padding: 14, borderRadius: 12, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    flex: 1, padding: 14, borderRadius: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
-  backBtnText: { color: COLORS.textMuted, fontSize: 15, fontWeight: '600' },
-  importBtn: { flex: 2, padding: 14, borderRadius: 12, alignItems: 'center', backgroundColor: COLORS.accent },
-  importBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  centered: { alignItems: 'center', paddingVertical: 30 },
-  loadingText: { color: COLORS.textMuted, marginTop: 12, fontSize: 14 },
+  backBtnText: { color: colors.textMuted, fontSize: 15, fontFamily: FONTS.bodySemiBold },
+  importBtn: { flex: 2, padding: 14, borderRadius: 14, alignItems: 'center', backgroundColor: colors.accent },
+  importBtnText: { color: '#fff', fontSize: 15, fontFamily: FONTS.bodySemiBold },
+  centered: { alignItems: 'center', paddingVertical: 30, gap: 10 },
+  loadingText: { color: colors.textMuted, marginTop: 4, fontSize: 14, fontFamily: FONTS.body },
   searchContainer: { marginBottom: 10 },
   searchInput: {
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 10,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-    padding: 10, fontSize: 14, color: COLORS.text,
+    backgroundColor: colors.cardBg, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.cardBorder,
+    padding: 10, fontSize: 14, fontFamily: FONTS.body, color: colors.text,
   },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   selectAllBtn: { padding: 6 },
-  selectAllText: { color: COLORS.accent, fontSize: 13, fontWeight: '600' },
-  countText: { color: COLORS.textMuted, fontSize: 12 },
+  selectAllText: { color: colors.accent, fontSize: 13, fontFamily: FONTS.bodySemiBold },
+  countText: { color: colors.textMuted, fontSize: 12, fontFamily: FONTS.body },
   list: { maxHeight: 220, marginBottom: 10 },
   contactRow: {
     flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 4,
-    borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1, borderColor: 'transparent',
+    borderRadius: 12, backgroundColor: colors.cardBg, borderWidth: 1, borderColor: 'transparent',
   },
-  contactRowSelected: { backgroundColor: 'rgba(232,54,79,0.06)', borderColor: 'rgba(232,54,79,0.2)' },
+  contactRowSelected: { backgroundColor: 'rgba(232,54,79,0.08)', borderColor: 'rgba(232,54,79,0.25)' },
   checkbox: {
-    width: 24, height: 24, borderRadius: 6, borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: 12,
+    width: 24, height: 24, borderRadius: 7, borderWidth: 2,
+    borderColor: colors.cardBorder, alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
-  checkboxSelected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  checkmark: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  checkboxSelected: { backgroundColor: colors.accent, borderColor: colors.accent },
   contactRowAvatar: { marginRight: 10 },
   contactInfo: { flex: 1 },
-  contactName: { fontSize: 15, fontWeight: '500', color: COLORS.text },
+  contactName: { fontSize: 15, fontFamily: FONTS.bodyMedium, color: colors.text },
   contactMeta: { flexDirection: 'row', gap: 10, marginTop: 3 },
-  metaTag: { fontSize: 12, color: COLORS.textMuted },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyText: { fontSize: 16, color: COLORS.text, fontWeight: '600' },
+  metaTag: { fontSize: 12, fontFamily: FONTS.body, color: colors.textMuted },
+  emptyText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text },
 });

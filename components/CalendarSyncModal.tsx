@@ -3,7 +3,9 @@ import {
   View, Text, TouchableOpacity, Modal, ScrollView,
   StyleSheet, ActivityIndicator, Switch,
 } from 'react-native';
-import { COLORS } from '../constants/theme';
+import Icon from './Icon';
+import { useColors } from '../constants/theme';
+import { FONTS } from '../constants/fonts';
 import { Contact } from '../constants/types';
 import { scanCalendarForMatches, applyCalendarMatches } from '../utils/calendar';
 
@@ -24,6 +26,9 @@ interface MatchDisplay {
 }
 
 export default function CalendarSyncModal({ visible, onClose, contacts, onApply }: CalendarSyncModalProps) {
+  const colors = useColors();
+  const styles = makeStyles(colors);
+
   const [loading, setLoading] = useState(false);
   const [matches, setMatches] = useState<MatchDisplay[]>([]);
   const [scanned, setScanned] = useState(false);
@@ -69,7 +74,10 @@ export default function CalendarSyncModal({ visible, onClose, contacts, onApply 
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity activeOpacity={1} onPress={() => {}} style={styles.content}>
 
-          <Text style={styles.title}>📅 Calendar Sync</Text>
+          <View style={styles.titleRow}>
+            <Icon name="calendar" size={18} color={colors.text} />
+            <Text style={styles.title}>Calendar Sync</Text>
+          </View>
           <Text style={styles.subtitle}>
             Scan your calendar to find events with your contacts and auto-update their last interaction date.
           </Text>
@@ -104,7 +112,7 @@ export default function CalendarSyncModal({ visible, onClose, contacts, onApply 
 
           {loading && (
             <View style={styles.centered}>
-              <ActivityIndicator size="large" color={COLORS.accent} />
+              <ActivityIndicator size="large" color={colors.accent} />
               <Text style={styles.loadingText}>Scanning your calendars...</Text>
               <Text style={styles.loadingHint}>Checking the last {daysBack} days of events</Text>
             </View>
@@ -114,7 +122,7 @@ export default function CalendarSyncModal({ visible, onClose, contacts, onApply 
             <>
               {matches.length === 0 ? (
                 <View style={styles.centered}>
-                  <Text style={styles.emptyEmoji}>📭</Text>
+                  <Icon name="inbox" size={34} color={colors.textMuted} />
                   <Text style={styles.emptyText}>No matches found</Text>
                   <Text style={styles.emptyHint}>
                     No calendar events matched your contacts in the last {daysBack} days. Try a longer range or make sure your calendars are synced.
@@ -134,16 +142,14 @@ export default function CalendarSyncModal({ visible, onClose, contacts, onApply 
                       <View key={match.contactId} style={[styles.matchCard, !match.accepted && styles.matchCardDisabled]}>
                         <View style={styles.matchInfo}>
                           <Text style={styles.matchName}>{match.contactName}</Text>
-                          <Text style={styles.matchEvent}>
-                            {match.matchType === 'attendee' ? '👤' : '📝'} {match.eventTitle}
-                          </Text>
+                          <Text style={styles.matchEvent}>{match.eventTitle}</Text>
                           <Text style={styles.matchDate}>{match.eventDate}</Text>
                         </View>
                         <Switch
                           value={match.accepted}
                           onValueChange={() => toggleMatch(match.contactId)}
-                          trackColor={{ false: '#333', true: COLORS.accent + '80' }}
-                          thumbColor={match.accepted ? COLORS.accent : '#666'}
+                          trackColor={{ false: '#767577', true: colors.accent + '80' }}
+                          thumbColor={match.accepted ? colors.accent : '#f4f3f4'}
                         />
                       </View>
                     ))}
@@ -174,55 +180,55 @@ export default function CalendarSyncModal({ visible, onClose, contacts, onApply 
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' },
+const makeStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   content: {
-    backgroundColor: COLORS.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: 36, maxHeight: '88%',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderBottomWidth: 0,
+    borderWidth: 1, borderColor: colors.cardBorder, borderBottomWidth: 0,
   },
-  title: { fontSize: 22, fontWeight: 'bold', color: COLORS.text, marginBottom: 6 },
-  subtitle: { fontSize: 13, color: COLORS.textMuted, lineHeight: 19, marginBottom: 20 },
-  label: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1, marginBottom: 8 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  title: { fontSize: 22, fontFamily: FONTS.displayBold, color: colors.text },
+  subtitle: { fontSize: 13, fontFamily: FONTS.body, color: colors.textMuted, lineHeight: 19, marginBottom: 20 },
+  label: { fontSize: 11, fontFamily: FONTS.bodySemiBold, color: colors.textMuted, letterSpacing: 1.2, marginBottom: 8 },
   rangeRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
   rangeChip: {
-    flex: 1, padding: 10, borderRadius: 10, alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'transparent',
+    flex: 1, padding: 10, borderRadius: 12, alignItems: 'center',
+    backgroundColor: colors.cardBg, borderWidth: 1, borderColor: 'transparent',
   },
-  rangeChipActive: { backgroundColor: COLORS.accent + '18', borderColor: COLORS.accent + '50' },
-  rangeChipText: { fontSize: 14, fontWeight: '600', color: COLORS.textMuted },
-  rangeChipTextActive: { color: COLORS.accent },
-  scanBtn: { padding: 16, borderRadius: 14, alignItems: 'center', backgroundColor: COLORS.accent, marginBottom: 10 },
-  scanBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  rangeChipActive: { backgroundColor: colors.accent + '18', borderColor: colors.accent + '50' },
+  rangeChipText: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.textMuted },
+  rangeChipTextActive: { color: colors.accent },
+  scanBtn: { padding: 16, borderRadius: 14, alignItems: 'center', backgroundColor: colors.accent, marginBottom: 10 },
+  scanBtnText: { color: '#fff', fontSize: 16, fontFamily: FONTS.bodySemiBold },
   closeBtn: {
-    padding: 14, borderRadius: 12, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    padding: 14, borderRadius: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
-  closeBtnText: { color: COLORS.textMuted, fontSize: 15, fontWeight: '600' },
-  centered: { alignItems: 'center', paddingVertical: 30 },
-  loadingText: { color: COLORS.text, marginTop: 14, fontSize: 15, fontWeight: '500' },
-  loadingHint: { color: COLORS.textMuted, marginTop: 4, fontSize: 13 },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyText: { fontSize: 16, color: COLORS.text, fontWeight: '600' },
-  emptyHint: { fontSize: 13, color: COLORS.textMuted, marginTop: 6, textAlign: 'center', lineHeight: 20, marginBottom: 20, paddingHorizontal: 10 },
-  resultCount: { fontSize: 14, color: COLORS.text, fontWeight: '600', marginBottom: 12 },
+  closeBtnText: { color: colors.textMuted, fontSize: 15, fontFamily: FONTS.bodySemiBold },
+  centered: { alignItems: 'center', paddingVertical: 30, gap: 4 },
+  loadingText: { color: colors.text, marginTop: 10, fontSize: 15, fontFamily: FONTS.bodyMedium },
+  loadingHint: { color: colors.textMuted, marginTop: 4, fontSize: 13, fontFamily: FONTS.body },
+  emptyText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text, marginTop: 8 },
+  emptyHint: { fontSize: 13, fontFamily: FONTS.body, color: colors.textMuted, marginTop: 2, textAlign: 'center', lineHeight: 20, marginBottom: 20, paddingHorizontal: 10 },
+  resultCount: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.text, marginBottom: 12 },
   list: { maxHeight: 350, marginBottom: 14 },
   matchCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 14, marginBottom: 6, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    padding: 14, marginBottom: 6, borderRadius: 14,
+    backgroundColor: colors.cardBg, borderWidth: 1, borderColor: colors.cardBorder,
   },
   matchCardDisabled: { opacity: 0.4 },
   matchInfo: { flex: 1, marginRight: 12 },
-  matchName: { fontSize: 15, fontWeight: '600', color: COLORS.text },
-  matchEvent: { fontSize: 13, color: COLORS.textMuted, marginTop: 3 },
-  matchDate: { fontSize: 12, color: COLORS.accent, marginTop: 2, fontWeight: '500' },
+  matchName: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text },
+  matchEvent: { fontSize: 13, fontFamily: FONTS.body, color: colors.textMuted, marginTop: 3 },
+  matchDate: { fontSize: 12, fontFamily: FONTS.bodyMedium, color: colors.accent, marginTop: 2 },
   bottomButtons: { flexDirection: 'row', gap: 10 },
   cancelBtn: {
-    flex: 1, padding: 14, borderRadius: 12, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    flex: 1, padding: 14, borderRadius: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.cardBorder,
   },
-  cancelBtnText: { color: COLORS.textMuted, fontSize: 15, fontWeight: '600' },
-  applyBtn: { flex: 2, padding: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#4ADE80' },
-  applyBtnText: { color: '#0D0D12', fontSize: 15, fontWeight: 'bold' },
+  cancelBtnText: { color: colors.textMuted, fontSize: 15, fontFamily: FONTS.bodySemiBold },
+  applyBtn: { flex: 2, padding: 14, borderRadius: 14, alignItems: 'center', backgroundColor: colors.success },
+  applyBtnText: { color: '#fff', fontSize: 15, fontFamily: FONTS.bodySemiBold },
 });

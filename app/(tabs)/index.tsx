@@ -12,23 +12,29 @@ import AddContactModal from '../../components/AddContactModal';
 import CalendarSyncModal from '../../components/CalendarSyncModal';
 import ContactCard from '../../components/ContactCard';
 import ContactDetailModal from '../../components/ContactDetailModal';
+import Icon, { tierIconName } from '../../components/Icon';
 import ImportContactsModal from '../../components/ImportContactsModal';
-import { COLORS, TIER_CONFIG } from '../../constants/theme';
+import { TIER_CONFIG, tierTextColor, useColors, useColorSchemeName } from '../../constants/theme';
+import { FONTS } from '../../constants/fonts';
 import { Contact } from '../../constants/types';
 import { checkAndSendNotifications, requestNotificationPermission, scheduleAllNotifications } from '../../utils/notifications';
 import { loadContacts, saveContacts } from '../../utils/storage';
 import { daysSince, sortByUrgency } from '../../utils/time';
 
 const SAMPLE_CONTACTS: Contact[] = [
-  { id: '1', name: 'Alex Rivera', tier: 1, lastInteraction: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0], interactionType: '☕ Coffee/Meal', history: [], notes: '', birthday: '03/15', hobbies: 'Hiking, board games', knowFrom: 'College roommate' },
-  { id: '2', name: 'Sam Chen', tier: 2, lastInteraction: new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0], interactionType: '📱 Call', history: [], notes: '', birthday: '07/22', hobbies: 'Cooking, photography', knowFrom: 'Work' },
-  { id: '3', name: 'Jordan Lee', tier: 1, lastInteraction: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0], interactionType: '💬 Text/Chat', history: [], notes: '', birthday: '11/05', hobbies: 'Gaming, movies', knowFrom: 'High school' },
-  { id: '4', name: 'Morgan Park', tier: 3, lastInteraction: new Date(Date.now() - 20 * 86400000).toISOString().split('T')[0], interactionType: '🎉 Hangout', history: [], notes: '', birthday: '', hobbies: 'Running', knowFrom: 'Gym' },
-  { id: '5', name: 'Taylor Kim', tier: 4, lastInteraction: new Date(Date.now() - 45 * 86400000).toISOString().split('T')[0], interactionType: '📧 Email', history: [], notes: '', birthday: '01/30', hobbies: '', knowFrom: 'Conference' },
-  { id: '6', name: 'Casey Nguyen', tier: 5, lastInteraction: new Date(Date.now() - 100 * 86400000).toISOString().split('T')[0], interactionType: '🤝 Other', history: [], notes: '', birthday: '', hobbies: '', knowFrom: 'Friend of a friend' },
+  { id: '1', name: 'Alex Rivera', tier: 1, lastInteraction: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0], interactionType: 'Coffee/Meal', history: [], notes: '', birthday: '03/15', hobbies: 'Hiking, board games', knowFrom: 'College roommate' },
+  { id: '2', name: 'Sam Chen', tier: 2, lastInteraction: new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0], interactionType: 'Call', history: [], notes: '', birthday: '07/22', hobbies: 'Cooking, photography', knowFrom: 'Work' },
+  { id: '3', name: 'Jordan Lee', tier: 1, lastInteraction: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0], interactionType: 'Text/Chat', history: [], notes: '', birthday: '11/05', hobbies: 'Gaming, movies', knowFrom: 'High school' },
+  { id: '4', name: 'Morgan Park', tier: 3, lastInteraction: new Date(Date.now() - 20 * 86400000).toISOString().split('T')[0], interactionType: 'Hangout', history: [], notes: '', birthday: '', hobbies: 'Running', knowFrom: 'Gym' },
+  { id: '5', name: 'Taylor Kim', tier: 4, lastInteraction: new Date(Date.now() - 45 * 86400000).toISOString().split('T')[0], interactionType: 'Email', history: [], notes: '', birthday: '01/30', hobbies: '', knowFrom: 'Conference' },
+  { id: '6', name: 'Casey Nguyen', tier: 5, lastInteraction: new Date(Date.now() - 100 * 86400000).toISOString().split('T')[0], interactionType: 'Other', history: [], notes: '', birthday: '', hobbies: '', knowFrom: 'Friend of a friend' },
 ];
 
 export default function HomeScreen() {
+  const colors = useColors();
+  const scheme = useColorSchemeName();
+  const styles = makeStyles(colors);
+
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [notificationsGranted, setNotificationsGranted] = useState(false);
@@ -150,7 +156,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: COLORS.textMuted, fontSize: 16 }}>Loading...</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 16, fontFamily: FONTS.body }}>Loading...</Text>
       </View>
     );
   }
@@ -158,7 +164,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.textMuted} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -169,9 +175,9 @@ export default function HomeScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           {[
-            { label: 'TOTAL', value: contacts.length, color: COLORS.text },
-            { label: 'OVERDUE', value: overdueCount, color: COLORS.overdue },
-            { label: 'CRITICAL', value: criticalCount, color: COLORS.danger },
+            { label: 'TOTAL', value: contacts.length, color: colors.text },
+            { label: 'OVERDUE', value: overdueCount, color: colors.overdue },
+            { label: 'CRITICAL', value: criticalCount, color: colors.danger },
           ].map((s, i) => (
             <View key={i} style={styles.statBox}>
               <Text style={[styles.statNumber, { color: s.color }]}>{s.value}</Text>
@@ -182,16 +188,17 @@ export default function HomeScreen() {
 
         {/* Search */}
         <View style={styles.searchContainer}>
+          <Icon name="search" size={16} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search contacts..."
-            placeholderTextColor={COLORS.textDark}
+            placeholderTextColor={colors.textDark}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearch}>
-              <Text style={styles.clearSearchText}>✕</Text>
+              <Icon name="close" size={14} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -205,18 +212,19 @@ export default function HomeScreen() {
               style={[styles.navBtn, view === v && styles.navBtnActive]}
             >
               <Text style={[styles.navBtnText, view === v && styles.navBtnTextActive]}>
-                {v === 'dashboard' ? '📋 Dashboard' : '🏷️ By Tier'}
+                {v === 'dashboard' ? 'Dashboard' : 'By Tier'}
               </Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity onPress={() => setShowImport(true)} style={styles.importNavBtn}>
-            <Text style={styles.importNavBtnText}>📱</Text>
+          <TouchableOpacity onPress={() => setShowImport(true)} style={styles.iconNavBtn}>
+            <Icon name="phone" size={16} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowCalendarSync(true)} style={styles.importNavBtn}>
-            <Text style={styles.importNavBtnText}>📅</Text>
+          <TouchableOpacity onPress={() => setShowCalendarSync(true)} style={styles.iconNavBtn}>
+            <Icon name="calendar" size={16} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowAdd(true)} style={styles.addBtn}>
-            <Text style={styles.addBtnText}>+ Add</Text>
+            <Icon name="plus" size={15} color="#fff" strokeWidth={2.5} />
+            <Text style={styles.addBtnText}>Add</Text>
           </TouchableOpacity>
         </View>
 
@@ -238,8 +246,9 @@ export default function HomeScreen() {
                   filterTier === t && { backgroundColor: TIER_CONFIG[t].bg, borderColor: TIER_CONFIG[t].border },
                 ]}
               >
-                <Text style={[styles.filterChipText, filterTier === t && { color: TIER_CONFIG[t].color }]}>
-                  {TIER_CONFIG[t].emoji} T{t}
+                <Icon name={tierIconName(t)} size={11} color={filterTier === t ? tierTextColor(t, scheme) : colors.textMuted} />
+                <Text style={[styles.filterChipText, filterTier === t && { color: tierTextColor(t, scheme) }]}>
+                  T{t}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -251,14 +260,12 @@ export default function HomeScreen() {
           <View style={styles.section}>
             {sorted.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyEmoji}>
-                  {searchQuery ? '🔍' : '👋'}
-                </Text>
+                <Icon name={searchQuery ? 'search' : 'wave'} size={32} color={colors.textMuted} />
                 <Text style={styles.emptyText}>
                   {searchQuery ? 'No matches found' : 'No contacts yet'}
                 </Text>
                 <Text style={styles.emptyHint}>
-                  {searchQuery ? 'Try a different search' : 'Tap + Add to get started'}
+                  {searchQuery ? 'Try a different search' : 'Tap Add to get started'}
                 </Text>
               </View>
             ) : (
@@ -286,9 +293,9 @@ export default function HomeScreen() {
               return (
                 <View key={tier} style={styles.tierGroup}>
                   <View style={[styles.tierHeader, { backgroundColor: config.bg, borderColor: config.border }]}>
-                    <Text style={{ fontSize: 18 }}>{config.emoji}</Text>
+                    <Icon name={tierIconName(tier)} size={18} color={tierTextColor(tier, scheme)} />
                     <View>
-                      <Text style={[styles.tierHeaderTitle, { color: config.color }]}>
+                      <Text style={[styles.tierHeaderTitle, { color: tierTextColor(tier, scheme) }]}>
                         Tier {tier} — {config.label}
                       </Text>
                       <Text style={styles.tierHeaderSub}>
@@ -351,60 +358,63 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.bg },
-  header: { paddingTop: 60, paddingBottom: 16, alignItems: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', color: COLORS.text },
-  subtitle: { fontSize: 13, color: COLORS.textMuted, letterSpacing: 2, marginTop: 4 },
-  statsRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 16 },
+const makeStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  header: { paddingTop: 60, paddingBottom: 20, alignItems: 'center' },
+  title: { fontSize: 30, fontFamily: FONTS.displayBold, color: colors.text, letterSpacing: -0.3 },
+  subtitle: { fontSize: 12, fontFamily: FONTS.bodyMedium, color: colors.textMuted, letterSpacing: 2.5, marginTop: 6 },
+  statsRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 18 },
   statBox: {
-    flex: 1, backgroundColor: COLORS.cardBg, borderRadius: 14,
-    borderWidth: 1, borderColor: COLORS.cardBorder, padding: 14, alignItems: 'center',
+    flex: 1, backgroundColor: colors.cardBg, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.cardBorder, padding: 16,
+    alignItems: 'center',
+    shadowColor: colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 1, shadowRadius: 20, elevation: 2,
   },
-  statNumber: { fontSize: 22, fontWeight: 'bold' },
-  statLabel: { fontSize: 11, color: COLORS.textMuted, letterSpacing: 1, marginTop: 2 },
-  searchContainer: { paddingHorizontal: 16, marginBottom: 12, position: 'relative' },
-  searchInput: {
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-    padding: 12, paddingRight: 40, fontSize: 15, color: COLORS.text,
+  statNumber: { fontSize: 24, fontFamily: FONTS.displayBold },
+  statLabel: { fontSize: 10, fontFamily: FONTS.bodyMedium, color: colors.textMuted, letterSpacing: 1.2, marginTop: 3 },
+  searchContainer: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 20, marginBottom: 14,
+    backgroundColor: colors.cardBg, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.cardBorder, paddingHorizontal: 14,
   },
-  clearSearch: { position: 'absolute', right: 28, top: 12, padding: 4 },
-  clearSearchText: { color: COLORS.textMuted, fontSize: 16 },
-  navRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 6, marginBottom: 12 },
-  navBtn: { flex: 1, padding: 10, borderRadius: 10, alignItems: 'center' },
-  navBtnActive: { backgroundColor: 'rgba(255,255,255,0.1)' },
-  navBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
-  navBtnTextActive: { color: COLORS.text },
-  addBtn: { padding: 10, paddingHorizontal: 14, borderRadius: 10, backgroundColor: COLORS.accent },
-  addBtnText: { fontSize: 13, fontWeight: '600', color: '#fff' },
-  importNavBtn: {
-    padding: 10, paddingHorizontal: 14, borderRadius: 10,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.04)',
+  searchInput: { flex: 1, paddingVertical: 13, fontSize: 14, fontFamily: FONTS.body, color: colors.text },
+  clearSearch: { padding: 4 },
+  navRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 6, marginBottom: 14, alignItems: 'center' },
+  navBtn: { flex: 1, padding: 9, borderRadius: 11, alignItems: 'center' },
+  navBtnActive: { backgroundColor: colors.cardBorder },
+  navBtnText: { fontSize: 13, fontFamily: FONTS.bodySemiBold, color: colors.textMuted },
+  navBtnTextActive: { color: colors.text },
+  addBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: 9, paddingHorizontal: 14, borderRadius: 11, backgroundColor: colors.accent,
   },
-  importNavBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.text },
-  filterRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 5, marginBottom: 16, flexWrap: 'wrap' },
+  addBtnText: { fontSize: 13, fontFamily: FONTS.bodySemiBold, color: '#fff' },
+  iconNavBtn: {
+    width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.cardBorder, backgroundColor: colors.cardBg,
+  },
+  filterRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 6, marginBottom: 18, flexWrap: 'wrap' },
   filterChip: {
-    paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'transparent',
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: 7, paddingHorizontal: 13, borderRadius: 20,
+    backgroundColor: colors.cardBg, borderWidth: 1, borderColor: 'transparent',
   },
-  filterChipActive: { backgroundColor: 'rgba(255,255,255,0.12)' },
-  filterChipText: { fontSize: 12, color: COLORS.textMuted },
-  filterChipTextActive: { color: COLORS.text },
-  section: { paddingHorizontal: 16 },
+  filterChipActive: { backgroundColor: colors.cardBorder },
+  filterChipText: { fontSize: 12, fontFamily: FONTS.bodyMedium, color: colors.textMuted },
+  filterChipTextActive: { color: colors.text },
+  section: { paddingHorizontal: 20 },
   emptyState: {
-    alignItems: 'center', padding: 40, backgroundColor: COLORS.cardBg,
-    borderRadius: 14, borderWidth: 1, borderColor: COLORS.cardBorder,
+    alignItems: 'center', padding: 40, gap: 12, backgroundColor: colors.cardBg,
+    borderRadius: 16, borderWidth: 1, borderColor: colors.cardBorder,
   },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyText: { fontSize: 16, color: COLORS.text, fontWeight: '600' },
-  emptyHint: { fontSize: 13, color: COLORS.textMuted, marginTop: 4 },
-  tierGroup: { marginBottom: 20 },
+  emptyText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text },
+  emptyHint: { fontSize: 13, fontFamily: FONTS.body, color: colors.textMuted, marginTop: -6 },
+  tierGroup: { marginBottom: 22 },
   tierHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10,
-    padding: 10, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10,
+    padding: 12, paddingHorizontal: 16, borderRadius: 14, borderWidth: 1,
   },
-  tierHeaderTitle: { fontSize: 14, fontWeight: '600' },
-  tierHeaderSub: { fontSize: 11, color: COLORS.textMuted },
-  tierEmpty: { padding: 12, fontSize: 13, color: COLORS.textDark, fontStyle: 'italic', paddingLeft: 8 },
+  tierHeaderTitle: { fontSize: 14, fontFamily: FONTS.bodySemiBold },
+  tierHeaderSub: { fontSize: 11, fontFamily: FONTS.body, color: colors.textMuted, marginTop: 1 },
+  tierEmpty: { padding: 12, fontSize: 13, fontFamily: FONTS.body, color: colors.textDark, fontStyle: 'italic', paddingLeft: 8 },
 });

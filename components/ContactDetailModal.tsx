@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import ContactAvatar from './ContactAvatar';
-import { TIER_CONFIG, INTERACTION_TYPES, COLORS } from '../constants/theme';
+import Icon, { tierIconName } from './Icon';
+import { TIER_CONFIG, INTERACTION_TYPES, tierTextColor, useColors, useColorSchemeName } from '../constants/theme';
+import { FONTS } from '../constants/fonts';
 import { Contact } from '../constants/types';
 import { formatDays, getUrgencyForContact } from '../utils/time';
 
@@ -22,6 +24,10 @@ interface ContactDetailModalProps {
 export default function ContactDetailModal({
   contact, visible, onClose, onLogInteraction, onUpdateTier, onUpdateField, onDelete,
 }: ContactDetailModalProps) {
+  const colors = useColors();
+  const scheme = useColorSchemeName();
+  const styles = makeStyles(colors);
+
   const [logType, setLogType] = useState(INTERACTION_TYPES[0]);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -79,7 +85,7 @@ export default function ContactDetailModal({
             value={editText}
             onChangeText={setEditText}
             placeholder={placeholder}
-            placeholderTextColor={COLORS.textDark}
+            placeholderTextColor={colors.textDark}
             multiline={multiline}
             autoFocus
           />
@@ -110,12 +116,13 @@ export default function ContactDetailModal({
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerLeft}>
-                <ContactAvatar name={contact.name} photoUri={contact.photoUri} size={56} borderColor={tier.color} />
+                <ContactAvatar name={contact.name} photoUri={contact.photoUri} size={58} borderColor={tier.color} />
                 <View>
                   <Text style={styles.name}>{contact.name}</Text>
-                  <Text style={[styles.tierLabel, { color: tier.color }]}>
-                    {tier.emoji} {tier.label}
-                  </Text>
+                  <View style={styles.tierLabelRow}>
+                    <Icon name={tierIconName(contact.tier)} size={12} color={tierTextColor(contact.tier, scheme)} />
+                    <Text style={[styles.tierLabel, { color: tierTextColor(contact.tier, scheme) }]}>{tier.label}</Text>
+                  </View>
                 </View>
               </View>
               <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
@@ -147,11 +154,12 @@ export default function ContactDetailModal({
                     contact.tier === t && { backgroundColor: TIER_CONFIG[t].color + '20', borderColor: TIER_CONFIG[t].color + '60' },
                   ]}
                 >
+                  <Icon name={tierIconName(t)} size={14} color={contact.tier === t ? tierTextColor(t, scheme) : colors.textMuted} />
                   <Text style={[
                     styles.tierNum,
-                    contact.tier === t && { color: TIER_CONFIG[t].color },
+                    contact.tier === t && { color: tierTextColor(t, scheme) },
                   ]}>
-                    {TIER_CONFIG[t].emoji} {t}
+                    {t}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -159,7 +167,7 @@ export default function ContactDetailModal({
 
             {/* Editable fields */}
             {/* Birthday with calendar picker */}
-            <Text style={styles.sectionLabel}>🎂 BIRTHDAY</Text>
+            <Text style={styles.sectionLabel}>BIRTHDAY</Text>
             <TouchableOpacity
               onPress={() => {
                 // Parse existing birthday into date if possible
@@ -180,7 +188,7 @@ export default function ContactDetailModal({
                 <Text style={contact.birthday ? styles.fieldText : styles.fieldPlaceholder}>
                   {contact.birthday || 'Tap to set birthday...'}
                 </Text>
-                <Text style={styles.calendarIcon}>📅</Text>
+                <Icon name="calendar" size={16} color={colors.textMuted} />
               </View>
             </TouchableOpacity>
             {showBirthdayPicker && (
@@ -199,7 +207,7 @@ export default function ContactDetailModal({
                   }
                 }}
                 maximumDate={new Date()}
-                themeVariant="dark"
+                themeVariant={scheme}
               />
             )}
             {Platform.OS === 'ios' && showBirthdayPicker && (
@@ -207,9 +215,9 @@ export default function ContactDetailModal({
                 <Text style={styles.dateDoneText}>Done</Text>
               </TouchableOpacity>
             )}
-            {renderEditableField('🏠 HOW DO I KNOW THEM?', 'knowFrom', contact.knowFrom, 'Work, college, gym...')}
-            {renderEditableField('🎯 HOBBIES IN COMMON', 'hobbies', contact.hobbies, 'Gaming, hiking, cooking...', true)}
-            {renderEditableField('📝 NOTES', 'notes', contact.notes, 'Anything to remember...', true)}
+            {renderEditableField('HOW DO I KNOW THEM?', 'knowFrom', contact.knowFrom, 'Work, college, gym...')}
+            {renderEditableField('HOBBIES IN COMMON', 'hobbies', contact.hobbies, 'Gaming, hiking, cooking...', true)}
+            {renderEditableField('NOTES', 'notes', contact.notes, 'Anything to remember...', true)}
 
             {/* Log Interaction */}
             <Text style={styles.sectionLabel}>LOG INTERACTION</Text>
@@ -240,7 +248,7 @@ export default function ContactDetailModal({
                 setLogType(INTERACTION_TYPES[0]);
               }}
             >
-              <Text style={styles.logButtonText}>Log {logType.split(' ')[0]} Today</Text>
+              <Text style={styles.logButtonText}>Log {logType} Today</Text>
             </TouchableOpacity>
 
             {/* History */}
@@ -262,74 +270,75 @@ export default function ContactDetailModal({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' },
+const makeStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   content: {
-    backgroundColor: COLORS.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 24, paddingBottom: 40, maxHeight: '90%',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderBottomWidth: 0,
+    borderWidth: 1, borderColor: colors.cardBorder, borderBottomWidth: 0,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
-  name: { fontSize: 24, fontWeight: 'bold', color: COLORS.text },
-  tierLabel: { fontSize: 14, marginTop: 4 },
+  name: { fontSize: 22, fontFamily: FONTS.displayBold, color: colors.text },
+  tierLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
+  tierLabel: { fontSize: 13, fontFamily: FONTS.bodyMedium },
   deleteBtn: {
-    padding: 8, paddingHorizontal: 14, borderRadius: 8,
+    padding: 8, paddingHorizontal: 14, borderRadius: 10,
     borderWidth: 1, borderColor: 'rgba(232,54,79,0.3)', backgroundColor: 'rgba(232,54,79,0.1)',
   },
-  deleteBtnText: { color: COLORS.danger, fontSize: 13, fontWeight: '600' },
+  deleteBtnText: { color: colors.danger, fontSize: 13, fontFamily: FONTS.bodySemiBold },
   statusCard: {
-    padding: 16, borderRadius: 12, borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.02)', alignItems: 'center', marginBottom: 20,
+    padding: 18, borderRadius: 16, borderWidth: 1,
+    backgroundColor: colors.cardBg, alignItems: 'center', marginBottom: 22,
+    shadowColor: colors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 1, shadowRadius: 20, elevation: 2,
   },
-  statusTime: { fontSize: 28, fontWeight: 'bold' },
-  statusLabel: { fontSize: 13, color: COLORS.textMuted, marginTop: 4 },
-  sectionLabel: { fontSize: 12, color: COLORS.textMuted, letterSpacing: 1, marginBottom: 10, marginTop: 8 },
-  tierRow: { flexDirection: 'row', gap: 6, marginBottom: 16 },
+  statusTime: { fontSize: 28, fontFamily: FONTS.displayBold },
+  statusLabel: { fontSize: 13, fontFamily: FONTS.body, color: colors.textMuted, marginTop: 5 },
+  sectionLabel: { fontSize: 11, fontFamily: FONTS.bodySemiBold, color: colors.textMuted, letterSpacing: 1.2, marginBottom: 10, marginTop: 8 },
+  tierRow: { flexDirection: 'row', gap: 6, marginBottom: 18 },
   tierOption: {
-    flex: 1, alignItems: 'center', padding: 10, borderRadius: 10,
-    borderWidth: 2, borderColor: 'transparent', backgroundColor: 'rgba(255,255,255,0.04)',
+    flex: 1, alignItems: 'center', gap: 4, padding: 10, borderRadius: 12,
+    borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.cardBg,
   },
-  tierNum: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+  tierNum: { fontSize: 12, fontFamily: FONTS.bodySemiBold, color: colors.textMuted },
   fieldCard: {
-    padding: 14, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1, borderColor: COLORS.cardBorder, marginBottom: 8, minHeight: 48,
+    padding: 14, borderRadius: 14, backgroundColor: colors.cardBg,
+    borderWidth: 1, borderColor: colors.cardBorder, marginBottom: 8, minHeight: 48,
     justifyContent: 'center',
   },
   birthdayRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  calendarIcon: { fontSize: 18 },
   dateDoneBtn: { alignSelf: 'flex-end', padding: 8, paddingHorizontal: 16, marginBottom: 8 },
-  dateDoneText: { color: COLORS.accent, fontSize: 15, fontWeight: '600' },
-  fieldText: { fontSize: 14, color: COLORS.text, lineHeight: 20 },
-  fieldPlaceholder: { fontSize: 14, color: COLORS.textDark, fontStyle: 'italic' },
+  dateDoneText: { color: colors.accent, fontSize: 15, fontFamily: FONTS.bodySemiBold },
+  fieldText: { fontSize: 14, fontFamily: FONTS.body, color: colors.text, lineHeight: 20 },
+  fieldPlaceholder: { fontSize: 14, fontFamily: FONTS.body, color: colors.textDark, fontStyle: 'italic' },
   editContainer: { marginBottom: 8 },
   editInput: {
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
-    padding: 14, fontSize: 14, color: COLORS.text,
+    backgroundColor: colors.cardBg, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.accent + '50',
+    padding: 14, fontSize: 14, fontFamily: FONTS.body, color: colors.text,
   },
   editButtons: { flexDirection: 'row', gap: 8, marginTop: 8, justifyContent: 'flex-end' },
   editCancelBtn: { padding: 8, paddingHorizontal: 16, borderRadius: 8 },
-  editCancelText: { color: COLORS.textMuted, fontSize: 14 },
-  editSaveBtn: { padding: 8, paddingHorizontal: 16, borderRadius: 8, backgroundColor: COLORS.accent },
-  editSaveText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  editCancelText: { color: colors.textMuted, fontSize: 14, fontFamily: FONTS.bodyMedium },
+  editSaveBtn: { padding: 8, paddingHorizontal: 16, borderRadius: 8, backgroundColor: colors.accent },
+  editSaveText: { color: '#fff', fontSize: 14, fontFamily: FONTS.bodySemiBold },
   interactionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 },
   interactionChip: {
-    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10,
+    backgroundColor: colors.cardBg,
   },
-  interactionChipActive: { backgroundColor: 'rgba(255,255,255,0.12)' },
-  interactionChipText: { fontSize: 13, color: COLORS.textMuted },
-  interactionChipTextActive: { color: COLORS.text, fontWeight: '600' },
+  interactionChipActive: { backgroundColor: colors.cardBorder },
+  interactionChipText: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: colors.textMuted },
+  interactionChipTextActive: { color: colors.text, fontFamily: FONTS.bodySemiBold },
   logButton: {
-    padding: 14, borderRadius: 12, alignItems: 'center', marginBottom: 16,
-    backgroundColor: '#4ADE80',
+    padding: 15, borderRadius: 14, alignItems: 'center', marginBottom: 18,
+    backgroundColor: colors.success,
   },
-  logButtonText: { color: '#0D0D12', fontSize: 15, fontWeight: 'bold' },
+  logButtonText: { color: '#fff', fontSize: 15, fontFamily: FONTS.bodySemiBold },
   historyItem: {
     flexDirection: 'row', justifyContent: 'space-between',
-    padding: 10, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.02)', marginBottom: 4,
+    padding: 12, borderRadius: 12, backgroundColor: colors.cardBg, marginBottom: 5,
   },
-  historyType: { fontSize: 13, color: '#A09B93' },
-  historyDate: { fontSize: 13, color: COLORS.textMuted },
+  historyType: { fontSize: 13, fontFamily: FONTS.body, color: colors.text },
+  historyDate: { fontSize: 13, fontFamily: FONTS.body, color: colors.textMuted },
 });
