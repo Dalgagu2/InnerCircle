@@ -42,7 +42,20 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Inner Circle uses your contacts to let you quickly import people you want to keep in touch with."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Inner Circle scans your calendar to automatically update when you last saw someone.",
+          "remindersPermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
