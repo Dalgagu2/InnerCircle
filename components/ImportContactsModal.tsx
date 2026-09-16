@@ -36,6 +36,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
 
   useEffect(() => {
     if (visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets local state each time this always-mounted modal opens
       setMode('choose');
       setSelected(new Set());
       setTier(3);
@@ -85,6 +86,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
       const company = contact.company || contact.department || '';
 
       setPickedContact({
+        // eslint-disable-next-line react-hooks/purity -- runs in a press handler, not during render
         id: contact.id || Date.now().toString(),
         name: name.trim(),
         birthday,

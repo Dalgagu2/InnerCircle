@@ -31,6 +31,7 @@ export default function CalendarSyncModal({ visible, onClose, contacts, onApply 
 
   useEffect(() => {
     if (visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets local state each time this always-mounted modal opens
       setScanned(false);
       setMatches([]);
     }

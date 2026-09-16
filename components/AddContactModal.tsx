@@ -26,6 +26,7 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
   const handleAdd = () => {
     if (!name.trim()) return;
     const newContact: Contact = {
+      // eslint-disable-next-line react-hooks/purity -- runs in a press handler, not during render
       id: Date.now().toString(),
       name: name.trim(),
       tier,
