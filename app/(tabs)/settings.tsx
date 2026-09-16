@@ -87,7 +87,7 @@ export default function SettingsScreen() {
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
             <Text style={styles.settingLabel}>Enable Reminders</Text>
-            <Text style={styles.settingDesc}>Get notified when you're overdue</Text>
+            <Text style={styles.settingDesc}>Get notified when you&apos;re overdue</Text>
           </View>
           <Switch
             value={settings.notificationsEnabled}

@@ -290,7 +290,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
                 <View style={styles.modeCardInfo}>
                   <Text style={styles.modeCardTitle}>Pick One at a Time</Text>
                   <Text style={styles.modeCardDesc}>
-                    Opens your phone's contact picker. No permissions needed. Tap again to add another.
+                    Opens your phone&apos;s contact picker. No permissions needed. Tap again to add another.
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -372,8 +372,16 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
                   <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
                     {filtered.length === 0 ? (
                       <View style={styles.centered}>
-                        <Text style={styles.emptyEmoji}>{searchQuery ? '🔍' : '✅'}</Text>
-                        <Text style={styles.emptyText}>{searchQuery ? 'No matches' : 'All contacts imported!'}</Text>
+                        <Text style={styles.emptyEmoji}>
+                          {searchQuery ? '🔍' : phoneContacts.length === 0 ? '📵' : '✅'}
+                        </Text>
+                        <Text style={styles.emptyText}>
+                          {searchQuery
+                            ? 'No matches'
+                            : phoneContacts.length === 0
+                            ? 'No contacts found on this device'
+                            : 'All contacts imported!'}
+                        </Text>
                       </View>
                     ) : (
                       filtered.map(contact => {

@@ -13,11 +13,10 @@ import CalendarSyncModal from '../../components/CalendarSyncModal';
 import ContactCard from '../../components/ContactCard';
 import ContactDetailModal from '../../components/ContactDetailModal';
 import ImportContactsModal from '../../components/ImportContactsModal';
-import OnboardingScreen from '../../components/OnboardingScreen';
 import { COLORS, TIER_CONFIG } from '../../constants/theme';
 import { Contact } from '../../constants/types';
 import { checkAndSendNotifications, requestNotificationPermission, scheduleAllNotifications } from '../../utils/notifications';
-import { hasOnboarded, loadContacts, saveContacts, setOnboarded } from '../../utils/storage';
+import { loadContacts, saveContacts } from '../../utils/storage';
 import { daysSince, sortByUrgency } from '../../utils/time';
 
 const SAMPLE_CONTACTS: Contact[] = [
@@ -31,8 +30,8 @@ const SAMPLE_CONTACTS: Contact[] = [
 
 export default function HomeScreen() {
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [notificationsGranted, setNotificationsGranted] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showCalendarSync, setShowCalendarSync] = useState(false);
@@ -45,18 +44,13 @@ export default function HomeScreen() {
   // Load data on mount
   useEffect(() => {
     (async () => {
-      const onboarded = await hasOnboarded();
-      if (!onboarded) {
-        setShowOnboarding(true);
-        setLoading(false);
-        return;
-      }
       const saved = await loadContacts();
       setContacts(saved || SAMPLE_CONTACTS);
       setLoading(false);
 
       // Setup notifications
       const granted = await requestNotificationPermission();
+      setNotificationsGranted(granted);
       if (granted) {
         await scheduleAllNotifications();
         await checkAndSendNotifications();
@@ -71,11 +65,13 @@ export default function HomeScreen() {
     }
   }, [contacts, loading]);
 
-  const handleOnboardingComplete = async () => {
-    await setOnboarded();
-    setContacts(SAMPLE_CONTACTS);
-    setShowOnboarding(false);
-  };
+  // Keep scheduled reminders in sync with the latest contact data
+  // (logging an interaction, changing tiers, etc. all affect who's overdue)
+  useEffect(() => {
+    if (!loading && notificationsGranted) {
+      scheduleAllNotifications();
+    }
+  }, [contacts, loading, notificationsGranted]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -109,13 +105,11 @@ export default function HomeScreen() {
     // Update selected contact to reflect changes
     setSelectedContact(prev => {
       if (!prev || prev.id !== contactId) return prev;
-      const updated = contacts.find(c => c.id === contactId);
-      if (!updated) return prev;
       return {
-        ...updated,
+        ...prev,
         lastInteraction: date,
         interactionType: type,
-        history: [{ date, type }, ...(updated.history || [])].slice(0, 50),
+        history: [{ date, type }, ...(prev.history || [])].slice(0, 50),
       };
     });
   };
@@ -152,10 +146,6 @@ export default function HomeScreen() {
     const days = daysSince(c.lastInteraction);
     return days >= (TIER_CONFIG[c.tier]?.maxDays || 30) * 1.5;
   }).length;
-
-  if (showOnboarding) {
-    return <OnboardingScreen onComplete={handleOnboardingComplete} />;
-  }
 
   if (loading) {
     return (

@@ -130,6 +130,16 @@ export async function scanCalendarForMatches(
     if (!event.startDate) continue;
     const eventDate = new Date(event.startDate).toISOString().split('T')[0];
 
+    // expo-calendar doesn't include attendees on the Event object itself —
+    // they have to be fetched per event. Not all platforms/calendars support
+    // this, so failures here just mean we fall back to title matching.
+    let attendees: Calendar.Attendee[] = [];
+    try {
+      attendees = await Calendar.getAttendeesForEventAsync(event.id);
+    } catch (error) {
+      attendees = [];
+    }
+
     for (const contact of contacts) {
       // Skip if we already found a more recent match for this contact
       if (matchedContactIds.has(contact.id)) {
@@ -139,8 +149,8 @@ export async function scanCalendarForMatches(
 
       // Check attendees
       let matched = false;
-      if (event.attendees && event.attendees.length > 0) {
-        for (const attendee of event.attendees) {
+      if (attendees.length > 0) {
+        for (const attendee of attendees) {
           const attendeeName = attendee.name || '';
           if (namesMatch(contact.name, attendeeName)) {
             // Remove old match if exists (we want the most recent)

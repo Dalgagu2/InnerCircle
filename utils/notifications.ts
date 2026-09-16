@@ -9,7 +9,8 @@ import { loadContacts, loadSettings } from './storage';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -168,10 +169,11 @@ function getAcquaintancesMessage(contact: Contact, daysOverdue: number): { title
 
 // ─── Message Router ───────────────────────────────────────────────────
 
-function getMessageForContact(contact: Contact): { title: string; body: string } | null {
+function getMessageForContact(contact: Contact, dayOffset: number = 0): { title: string; body: string } | null {
   const days = daysSince(contact.lastInteraction);
+  const projectedDays = days === Infinity ? Infinity : days + dayOffset;
   const maxDays = TIER_CONFIG[contact.tier]?.maxDays || 30;
-  const daysOverdue = days - maxDays;
+  const daysOverdue = projectedDays === Infinity ? Infinity : projectedDays - maxDays;
 
   if (daysOverdue < 5) return null; // not overdue enough for any notification
 
@@ -255,7 +257,80 @@ function buildWeeklyDigest(contacts: Contact[]): { title: string; body: string }
   };
 }
 
+// ─── Date Helpers ───────────────────────────────────────────────────────
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+// Next time it will be `hour:minute` (today if it hasn't happened yet, else tomorrow)
+function getNextOccurrence(hour: number, minute: number): Date {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
+  return next.getTime() <= now.getTime() ? addDays(next, 1) : next;
+}
+
+// Next time it will be the given weekday (0=Sunday...6=Saturday) at `hour:minute`
+function getNextWeekdayAt(weekday: number, hour: number, minute: number): Date {
+  let next = getNextOccurrence(hour, minute);
+  while (next.getDay() !== weekday) {
+    next = addDays(next, 1);
+  }
+  return next;
+}
+
+function getNextBirthdayDate(birthdayStr: string): Date | null {
+  if (!birthdayStr) return null;
+  const parts = birthdayStr.split('/');
+  if (parts.length < 2) return null;
+
+  const month = parseInt(parts[0], 10) - 1; // 0-indexed
+  const day = parseInt(parts[1], 10);
+  if (isNaN(month) || isNaN(day)) return null;
+
+  const todayStart = startOfDay(new Date());
+  let year = todayStart.getFullYear();
+  if (new Date(year, month, day).getTime() < todayStart.getTime()) {
+    year += 1; // already passed this year, roll to next year
+  }
+  return new Date(year, month, day, 9, 0, 0, 0);
+}
+
 // ─── Schedule Functions ───────────────────────────────────────────────
+
+// Picks the single most urgent contact reminder `dayOffset` days from now,
+// so scheduled notifications reflect realistic future overdue counts even
+// if the app isn't reopened in the meantime.
+function pickMostUrgentMessage(
+  enabledContacts: Contact[],
+  dayOffset: number,
+): { contact: Contact; message: { title: string; body: string } } | null {
+  let best: { contact: Contact; message: { title: string; body: string }; ratio: number } | null = null;
+
+  for (const contact of enabledContacts) {
+    const message = getMessageForContact(contact, dayOffset);
+    if (!message) continue;
+
+    const days = daysSince(contact.lastInteraction);
+    const projectedDays = days === Infinity ? Infinity : days + dayOffset;
+    const maxDays = TIER_CONFIG[contact.tier]?.maxDays || 30;
+    const ratio = projectedDays === Infinity ? Infinity : projectedDays / maxDays;
+
+    if (!best || ratio > best.ratio) {
+      best = { contact, message, ratio };
+    }
+  }
+
+  return best ? { contact: best.contact, message: best.message } : null;
+}
+
+const REMINDER_LOOKAHEAD_DAYS = 7;
 
 export async function scheduleAllNotifications(): Promise<void> {
   // Cancel all existing scheduled notifications
@@ -266,60 +341,72 @@ export async function scheduleAllNotifications(): Promise<void> {
 
   if (!contacts || !settings.notificationsEnabled) return;
 
-  // Schedule individual contact reminders (daily check at 9am)
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'Checking friendships...',
-      body: 'This is a background trigger',
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 9,
-      minute: 0,
-    },
-  });
+  const DateTrigger = Notifications.SchedulableTriggerInputTypes.DATE;
 
-  // Schedule weekly digest for Monday at 9am
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: '📋 Weekly digest loading...',
-      body: 'Preparing your report',
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-      weekday: 2, // Monday (1=Sunday, 2=Monday)
-      hour: 9,
-      minute: 0,
-    },
-  });
+  // Weekly digest — real content computed now, delivered next Monday morning
+  const digest = buildWeeklyDigest(contacts);
+  if (digest) {
+    await Notifications.scheduleNotificationAsync({
+      content: { title: digest.title, body: digest.body },
+      trigger: { type: DateTrigger, date: getNextWeekdayAt(1, 9, 0) },
+    });
+  }
+
+  // Birthday reminders — each scheduled for the exact future date/time it applies to
+  for (const contact of contacts) {
+    if (!contact.birthday) continue;
+    const nextBirthday = getNextBirthdayDate(contact.birthday);
+    if (!nextBirthday) continue;
+
+    for (const milestone of [14, 7, 0]) {
+      const fireDate = addDays(nextBirthday, -milestone);
+      if (fireDate.getTime() <= Date.now()) continue; // that milestone has already passed this cycle
+
+      const message = getBirthdayMessage(contact, milestone);
+      if (!message) continue;
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: message.title,
+          body: message.body,
+          data: { contactId: contact.id, type: 'birthday' },
+        },
+        trigger: { type: DateTrigger, date: fireDate },
+      });
+    }
+  }
+
+  // Individual contact reminders — one per day for the next week, each with
+  // content projected for that day so it stays accurate without the app
+  // needing to be reopened. Re-run this whenever contacts/settings change
+  // to keep it in sync with real interactions.
+  const enabledContacts = contacts.filter(c => settings.enabledTiers.includes(c.tier));
+  const firstOccurrence = getNextOccurrence(9, 0);
+
+  for (let i = 0; i < REMINDER_LOOKAHEAD_DAYS; i++) {
+    const best = pickMostUrgentMessage(enabledContacts, i + 1);
+    if (!best) continue;
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: best.message.title,
+        body: best.message.body,
+        data: { contactId: best.contact.id },
+      },
+      trigger: { type: DateTrigger, date: addDays(firstOccurrence, i) },
+    });
+  }
 }
 
 // ─── Birthday Helpers ─────────────────────────────────────────────────
 
 function daysUntilBirthday(birthdayStr: string): number | null {
-  if (!birthdayStr) return null;
-  const parts = birthdayStr.split('/');
-  if (parts.length < 2) return null;
+  const nextBirthday = getNextBirthdayDate(birthdayStr);
+  if (!nextBirthday) return null;
 
-  const month = parseInt(parts[0]) - 1; // 0-indexed
-  const day = parseInt(parts[1]);
-  if (isNaN(month) || isNaN(day)) return null;
-
-  const now = new Date();
-  const thisYear = now.getFullYear();
-
-  let nextBirthday = new Date(thisYear, month, day);
-  // If birthday already passed this year, look at next year
-  if (nextBirthday.getTime() < now.getTime()) {
-    // Check if it's today
-    if (nextBirthday.getMonth() === now.getMonth() && nextBirthday.getDate() === now.getDate()) {
-      return 0;
-    }
-    nextBirthday = new Date(thisYear + 1, month, day);
-  }
-
-  const diff = nextBirthday.getTime() - now.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  const todayStart = startOfDay(new Date());
+  const targetStart = startOfDay(nextBirthday);
+  return Math.round((targetStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function getBirthdayMessage(contact: Contact, daysUntil: number): { title: string; body: string } | null {
