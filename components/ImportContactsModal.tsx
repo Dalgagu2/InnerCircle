@@ -143,6 +143,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
       birthday: pickedContact.birthday,
       hobbies: '',
       knowFrom: pickedContact.company,
+      zipCode: '',
       notes: '',
       photoUri,
     };
@@ -247,6 +248,7 @@ export default function ImportContactsModal({ visible, onClose, onImport, existi
         birthday: c.birthday,
         hobbies: '',
         knowFrom: c.company,
+        zipCode: '',
         notes: '',
         photoUri: await resolveContactPhotoUri(c.image),
       }))

@@ -4,6 +4,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import HobbyTagInput from './HobbyTagInput';
 import Icon, { tierIconName } from './Icon';
 import { TIER_CONFIG, tierTextColor, useColors, useColorSchemeName } from '../constants/theme';
 import { FONTS } from '../constants/fonts';
@@ -27,6 +28,7 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [hobbies, setHobbies] = useState('');
   const [knowFrom, setKnowFrom] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleAdd = () => {
@@ -42,6 +44,7 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
       birthday: birthday.trim(),
       hobbies: hobbies.trim(),
       knowFrom: knowFrom.trim(),
+      zipCode: zipCode.trim(),
       notes: notes.trim(),
     };
     onAdd(newContact);
@@ -56,6 +59,7 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
     setShowDatePicker(false);
     setHobbies('');
     setKnowFrom('');
+    setZipCode('');
     setNotes('');
   };
 
@@ -162,13 +166,22 @@ export default function AddContactModal({ visible, onClose, onAdd }: AddContactM
               />
 
               <Text style={styles.label}>HOBBIES IN COMMON (OPTIONAL)</Text>
+              <View style={{ marginBottom: 20 }}>
+                <HobbyTagInput
+                  value={hobbies}
+                  onChange={setHobbies}
+                  placeholder="Gaming, hiking, cooking..."
+                />
+              </View>
+
+              <Text style={styles.label}>ZIP CODE (OPTIONAL)</Text>
               <TextInput
-                style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
-                placeholder="Gaming, hiking, cooking..."
+                style={styles.input}
+                placeholder="Where they live, e.g. 90210"
                 placeholderTextColor={colors.textDark}
-                value={hobbies}
-                onChangeText={setHobbies}
-                multiline
+                value={zipCode}
+                onChangeText={setZipCode}
+                keyboardType="numeric"
               />
 
               <Text style={styles.label}>NOTES (OPTIONAL)</Text>

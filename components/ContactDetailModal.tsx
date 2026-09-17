@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import ContactAvatar from './ContactAvatar';
+import HobbyTagInput from './HobbyTagInput';
 import Icon, { tierIconName } from './Icon';
+import RecommendationsModal from './RecommendationsModal';
 import { TIER_CONFIG, INTERACTION_TYPES, tierTextColor, useColors, useColorSchemeName } from '../constants/theme';
 import { FONTS } from '../constants/fonts';
 import { Contact } from '../constants/types';
@@ -33,6 +35,7 @@ export default function ContactDetailModal({
   const [editText, setEditText] = useState('');
   const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
   const [birthdayDate, setBirthdayDate] = useState(new Date(2000, 0, 1));
+  const [showRecommendations, setShowRecommendations] = useState(false);
 
   if (!contact) return null;
 
@@ -75,6 +78,7 @@ export default function ContactDetailModal({
     value: string,
     placeholder: string,
     multiline: boolean = false,
+    keyboardType: 'default' | 'numeric' = 'default',
   ) => (
     <>
       <Text style={styles.sectionLabel}>{label}</Text>
@@ -87,6 +91,7 @@ export default function ContactDetailModal({
             placeholder={placeholder}
             placeholderTextColor={colors.textDark}
             multiline={multiline}
+            keyboardType={keyboardType}
             autoFocus
           />
           <View style={styles.editButtons}>
@@ -216,7 +221,26 @@ export default function ContactDetailModal({
               </TouchableOpacity>
             )}
             {renderEditableField('HOW DO I KNOW THEM?', 'knowFrom', contact.knowFrom, 'Work, college, gym...')}
-            {renderEditableField('HOBBIES IN COMMON', 'hobbies', contact.hobbies, 'Gaming, hiking, cooking...', true)}
+
+            <Text style={styles.sectionLabel}>HOBBIES IN COMMON</Text>
+            <View style={{ marginBottom: 8 }}>
+              <HobbyTagInput
+                value={contact.hobbies}
+                onChange={(v) => onUpdateField(contact.id, 'hobbies', v)}
+                placeholder="Gaming, hiking, cooking..."
+              />
+            </View>
+
+            {renderEditableField('ZIP CODE', 'zipCode', contact.zipCode, 'Where they live, e.g. 90210', false, 'numeric')}
+
+            <TouchableOpacity
+              style={styles.recommendBtn}
+              onPress={() => setShowRecommendations(true)}
+            >
+              <Icon name="compass" size={16} color={colors.accent} />
+              <Text style={styles.recommendBtnText}>Find Activities Nearby</Text>
+            </TouchableOpacity>
+
             {renderEditableField('NOTES', 'notes', contact.notes, 'Anything to remember...', true)}
 
             {/* Log Interaction */}
@@ -266,6 +290,12 @@ export default function ContactDetailModal({
           </ScrollView>
         </TouchableOpacity>
       </TouchableOpacity>
+
+      <RecommendationsModal
+        contact={contact}
+        visible={showRecommendations}
+        onClose={() => setShowRecommendations(false)}
+      />
     </Modal>
   );
 }
@@ -311,6 +341,12 @@ const makeStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
   dateDoneText: { color: colors.accent, fontSize: 15, fontFamily: FONTS.bodySemiBold },
   fieldText: { fontSize: 14, fontFamily: FONTS.body, color: colors.text, lineHeight: 20 },
   fieldPlaceholder: { fontSize: 14, fontFamily: FONTS.body, color: colors.textDark, fontStyle: 'italic' },
+  recommendBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    padding: 13, borderRadius: 14, marginBottom: 18, marginTop: 4,
+    backgroundColor: colors.accent + '15', borderWidth: 1, borderColor: colors.accent + '30',
+  },
+  recommendBtnText: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.accent },
   editContainer: { marginBottom: 8 },
   editInput: {
     backgroundColor: colors.cardBg, borderRadius: 14,

@@ -7,7 +7,7 @@ export type IconName =
   | 'wave' | 'tag' | 'clock' | 'rocket'
   | 'home' | 'gear' | 'target' | 'note' | 'bell' | 'send'
   | 'inbox' | 'download' | 'warning' | 'no-signal' | 'list' | 'user-plus'
-  | 'close';
+  | 'close' | 'compass';
 
 interface IconProps {
   name: IconName;
@@ -178,6 +178,12 @@ export default function Icon({ name, size = 16, color = '#000', strokeWidth = 2 
         <>
           <Line x1="18" y1="6" x2="6" y2="18" {...stroke} />
           <Line x1="6" y1="6" x2="18" y2="18" {...stroke} />
+        </>
+      )}
+      {name === 'compass' && (
+        <>
+          <Circle cx="12" cy="12" r="9" {...stroke} />
+          <Path d="M15.5 8.5 13.2 13.2l-4.7 2.3 2.3-4.7z" {...stroke} />
         </>
       )}
     </Svg>

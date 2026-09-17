@@ -14,5 +14,6 @@ export interface Contact {
   birthday: string;
   hobbies: string;
   knowFrom: string;
+  zipCode: string;
   photoUri?: string;
 }

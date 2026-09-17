@@ -16,7 +16,11 @@ export async function saveContacts(contacts: Contact[]): Promise<void> {
 export async function loadContacts(): Promise<Contact[] | null> {
   try {
     const data = await AsyncStorage.getItem(CONTACTS_KEY);
-    return data ? JSON.parse(data) : null;
+    if (!data) return null;
+    const parsed: Contact[] = JSON.parse(data);
+    // Contacts saved before a field existed (e.g. zipCode) won't have that key at all,
+    // so backfill defaults for anything added to the schema after contacts were first saved.
+    return parsed.map(c => ({ ...c, zipCode: c.zipCode || '' }));
   } catch (error) {
     console.error('Error loading contacts:', error);
     return null;

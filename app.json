@@ -55,6 +55,12 @@
           "calendarPermission": "Inner Circle scans your calendar to automatically update when you last saw someone.",
           "remindersPermission": false
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Inner Circle uses your location to find activities near you when a friend's zip code isn't set."
+        }
       ]
     ],
     "experiments": {

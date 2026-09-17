@@ -22,12 +22,12 @@ import { loadContacts, saveContacts } from '../../utils/storage';
 import { daysSince, sortByUrgency } from '../../utils/time';
 
 const SAMPLE_CONTACTS: Contact[] = [
-  { id: '1', name: 'Alex Rivera', tier: 1, lastInteraction: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0], interactionType: 'Coffee/Meal', history: [], notes: '', birthday: '03/15', hobbies: 'Hiking, board games', knowFrom: 'College roommate' },
-  { id: '2', name: 'Sam Chen', tier: 2, lastInteraction: new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0], interactionType: 'Call', history: [], notes: '', birthday: '07/22', hobbies: 'Cooking, photography', knowFrom: 'Work' },
-  { id: '3', name: 'Jordan Lee', tier: 1, lastInteraction: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0], interactionType: 'Text/Chat', history: [], notes: '', birthday: '11/05', hobbies: 'Gaming, movies', knowFrom: 'High school' },
-  { id: '4', name: 'Morgan Park', tier: 3, lastInteraction: new Date(Date.now() - 20 * 86400000).toISOString().split('T')[0], interactionType: 'Hangout', history: [], notes: '', birthday: '', hobbies: 'Running', knowFrom: 'Gym' },
-  { id: '5', name: 'Taylor Kim', tier: 4, lastInteraction: new Date(Date.now() - 45 * 86400000).toISOString().split('T')[0], interactionType: 'Email', history: [], notes: '', birthday: '01/30', hobbies: '', knowFrom: 'Conference' },
-  { id: '6', name: 'Casey Nguyen', tier: 5, lastInteraction: new Date(Date.now() - 100 * 86400000).toISOString().split('T')[0], interactionType: 'Other', history: [], notes: '', birthday: '', hobbies: '', knowFrom: 'Friend of a friend' },
+  { id: '1', name: 'Alex Rivera', tier: 1, lastInteraction: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0], interactionType: 'Coffee/Meal', history: [], notes: '', birthday: '03/15', hobbies: 'Hiking, board games', knowFrom: 'College roommate', zipCode: '' },
+  { id: '2', name: 'Sam Chen', tier: 2, lastInteraction: new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0], interactionType: 'Call', history: [], notes: '', birthday: '07/22', hobbies: 'Cooking, photography', knowFrom: 'Work', zipCode: '' },
+  { id: '3', name: 'Jordan Lee', tier: 1, lastInteraction: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0], interactionType: 'Text/Chat', history: [], notes: '', birthday: '11/05', hobbies: 'Gaming, movies', knowFrom: 'High school', zipCode: '' },
+  { id: '4', name: 'Morgan Park', tier: 3, lastInteraction: new Date(Date.now() - 20 * 86400000).toISOString().split('T')[0], interactionType: 'Hangout', history: [], notes: '', birthday: '', hobbies: 'Running', knowFrom: 'Gym', zipCode: '' },
+  { id: '5', name: 'Taylor Kim', tier: 4, lastInteraction: new Date(Date.now() - 45 * 86400000).toISOString().split('T')[0], interactionType: 'Email', history: [], notes: '', birthday: '01/30', hobbies: '', knowFrom: 'Conference', zipCode: '' },
+  { id: '6', name: 'Casey Nguyen', tier: 5, lastInteraction: new Date(Date.now() - 100 * 86400000).toISOString().split('T')[0], interactionType: 'Other', history: [], notes: '', birthday: '', hobbies: '', knowFrom: 'Friend of a friend', zipCode: '' },
 ];
 
 export default function HomeScreen() {
